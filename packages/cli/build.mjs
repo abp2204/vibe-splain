@@ -13,15 +13,12 @@ await build({
   // Keep all npm packages external — only inline @vibe-splain/brain
   external: [
     '@modelcontextprotocol/sdk',
-    'async-mutex',
     'better-sqlite3',
     'chokidar',
     'commander',
     'fs-extra',
-    'minimatch',
     'tar',
     'tree-sitter-wasms',
-    'uuid',
     'web-tree-sitter',
   ],
 });

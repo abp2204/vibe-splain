@@ -8,7 +8,8 @@
     "build": "npm run build -w packages/brain && npm run build -w packages/cli && npm run build -w packages/ui && node scripts/bundle-ui.js",
     "dev:ui": "npm run dev -w packages/ui",
     "test:regression": "tsx packages/cli/tests/test_wal_safety.ts && tsx packages/cli/tests/test_stale_patch.ts && tsx packages/cli/tests/test_budget_guard.ts && tsx packages/cli/tests/test_scope_enforcement.ts && tsx packages/cli/tests/test_portability.ts && tsx packages/cli/tests/test_adversarial.ts",
-    "release": "npm run build && cp README.md packages/cli/README.md && cd packages/cli && npm publish"
+    "test:package": "./scripts/test-package-portability.sh",
+    "release": "npm run build && npm run test:regression && npm run test:package && cp README.md packages/cli/README.md && cd packages/cli && npm publish"
   },
   "dependencies": {
     "better-sqlite3": "^12.10.0",

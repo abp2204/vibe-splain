@@ -40,11 +40,27 @@ export class PointerStore {
   constructor(projectRoot: string) {
     const dir = join(projectRoot, '.vibe-splainer');
     mkdirSync(dir, { recursive: true });
-    this.db = new Database(join(dir, 'pointer_store.db'));
-    // busy_timeout must be set first — it governs the WAL switch itself
-    this.db.pragma('busy_timeout = 5000');
-    this.db.pragma('journal_mode = WAL');
-    this.db.pragma('foreign_keys = ON');
+    this.db = new Database(join(dir, 'pointer_store.db'), { timeout: 10000 });
+    
+    // Retry-loop for WAL mode to survive heavy concurrent startup (WAL_SAFETY test)
+    let retries = 5;
+    while (retries > 0) {
+      try {
+        this.db.pragma('journal_mode = WAL');
+        this.db.pragma('foreign_keys = ON');
+        break;
+      } catch (e: any) {
+        if (e.code === 'SQLITE_BUSY' && retries > 1) {
+          retries--;
+          const delay = 100 + Math.random() * 200;
+          // Synchronous sleep since constructor is sync
+          const start = Date.now();
+          while (Date.now() - start < delay) {}
+          continue;
+        }
+        throw e;
+      }
+    }
     this._migrate();
   }
 
