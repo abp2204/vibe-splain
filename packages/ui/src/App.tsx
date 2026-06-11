@@ -4,7 +4,7 @@ import { Header } from './components/Header';
 import { PillarTabs } from './components/PillarTabs';
 import { DecisionCardComponent } from './components/DecisionCard';
 import { EvidenceSidebar } from './components/EvidenceSidebar';
-import { GravityHeatMap } from './components/GravityHeatMap';
+import { TriageMatrix } from './components/TriageMatrix';
 import { StartHere } from './components/StartHere';
 
 function App() {
@@ -77,8 +77,8 @@ function App() {
         )}
 
         <section className="map-section">
-          <div className="section-label">Gravity × Heat — every documented file plotted</div>
-          <GravityHeatMap cards={allCards} onSelect={scrollToCard} />
+          <div className="section-label">Triage — what to fix first</div>
+          <TriageMatrix cards={allCards} onSelect={scrollToCard} />
         </section>
 
         {map && <StartHere files={map.topGravity} cardByFile={cardByFile} onSelect={scrollToCard} />}

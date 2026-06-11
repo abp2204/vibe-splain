@@ -443,21 +443,105 @@ body::before {
   padding: 16px 18px;
 }
 
-/* ============ GRAVITY × HEAT MAP ============ */
-.heatmap {
+/* ============ TRIAGE MATRIX ============ */
+.triage-matrix {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.tm-cell {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  padding: 12px;
-  box-shadow: var(--shadow-card);
+  border-top: 2px solid var(--accent, var(--text-muted));
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  min-height: 116px;
+  display: flex;
+  flex-direction: column;
 }
-.heatmap-svg { width: 100%; height: auto; display: block; }
-.hm-axis { stroke: var(--text-muted); stroke-width: 1; opacity: 0.5; }
-.hm-axis-label { fill: var(--text-muted); font-size: 11px; font-family: var(--font-ui); }
-.hm-quadrant { fill: var(--accent-amber); font-size: 11px; font-weight: 600; opacity: 0.8; font-family: var(--font-ui); }
-.hm-dot { cursor: pointer; transition: fill-opacity 0.15s, r 0.15s; }
-.hm-dot:hover { fill-opacity: 1; }
-.hm-empty {
+/* Fix First is the headline quadrant — give it a red wash + glow */
+.tm-fixFirst {
+  background: rgba(255, 77, 94, 0.05);
+  box-shadow: var(--shadow-card), 0 0 24px rgba(255, 77, 94, 0.08);
+}
+.tm-cell-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.tm-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.tm-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  border-radius: 10px;
+  padding: 1px 8px;
+}
+.tm-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 2px 0 10px;
+}
+.tm-chips {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.tm-none {
+  font-size: 12px;
+  color: var(--text-muted);
+  opacity: 0.5;
+  font-style: italic;
+}
+.tm-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 5px 9px;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  transition: border-color 0.15s, background 0.15s;
+}
+.tm-chip:hover { border-color: var(--accent); background: var(--bg-hover); }
+.tm-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.tm-name {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tm-sev {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid;
+  border-radius: 4px;
+  padding: 0 4px;
+  margin-left: auto;
+}
+.tm-metric {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+.tm-sev + .tm-metric { margin-left: 6px; }
+.tm-empty {
   background: var(--bg-surface);
   border: 1px dashed var(--border-subtle);
   border-radius: var(--radius-lg);
@@ -465,6 +549,9 @@ body::before {
   text-align: center;
   color: var(--text-muted);
   font-size: 13px;
+}
+@media (max-width: 720px) {
+  .triage-matrix { grid-template-columns: 1fr; }
 }
 
 /* ============ START HERE RAIL ============ */
