@@ -2,6 +2,7 @@ import { forwardRef } from 'react';
 import type { DecisionCard } from '../types';
 import { MermaidDiagram } from './MermaidDiagram';
 import { categoryStyle } from '../categories';
+import { Term } from './Term';
 
 interface DecisionCardProps {
   card: DecisionCard;
@@ -10,11 +11,13 @@ interface DecisionCardProps {
 
 function SeverityPips({ severity }: { severity: number }) {
   return (
-    <span className="sev-pips" title={`severity ${severity}/5`}>
-      {[1, 2, 3, 4, 5].map(n => (
-        <span key={n} className={`pip ${n <= severity ? 'on' : ''}`} />
-      ))}
-    </span>
+    <Term k="severity">
+      <span className="sev-pips">
+        {[1, 2, 3, 4, 5].map(n => (
+          <span key={n} className={`pip ${n <= severity ? 'on' : ''}`} />
+        ))}
+      </span>
+    </Term>
   );
 }
 
@@ -30,15 +33,19 @@ export const DecisionCardComponent = forwardRef<HTMLDivElement, DecisionCardProp
         <div className="card-top">
           <div className="card-chips">
             {card.category && (
-              <span className="cat-chip" style={{ color: s.color, borderColor: s.color, background: `${s.color}1f` }}>
-                {s.glyph} {s.label}
-              </span>
+              <Term k={card.category}>
+                <span className="cat-chip" style={{ color: s.color, borderColor: s.color, background: `${s.color}1f` }}>
+                  {s.glyph} {s.label}
+                </span>
+              </Term>
             )}
             {typeof card.severity === 'number' && <SeverityPips severity={card.severity} />}
           </div>
-          <span className={`card-status ${card.status}`}>
-            {card.status === 'fresh' ? '● Fresh' : '⚠ Stale'}
-          </span>
+          <Term k={card.status === 'fresh' ? 'fresh' : 'stale'}>
+            <span className={`card-status ${card.status}`}>
+              {card.status === 'fresh' ? '● Fresh' : '⚠ Stale'}
+            </span>
+          </Term>
         </div>
 
         {card.thesis
@@ -53,7 +60,7 @@ export const DecisionCardComponent = forwardRef<HTMLDivElement, DecisionCardProp
           <div className="card-rows">
             {card.blastRadius && (
               <div className="card-row">
-                <span className="row-label">Blast radius</span>
+                <span className="row-label"><Term k="blastRadius">Blast radius</Term></span>
                 <span className="row-value">{card.blastRadius}</span>
               </div>
             )}
@@ -76,8 +83,8 @@ export const DecisionCardComponent = forwardRef<HTMLDivElement, DecisionCardProp
           {card.primaryFile && <span className="card-file">{card.primaryFile}</span>}
           {(typeof card.gravity === 'number' || typeof card.heat === 'number') && (
             <span className="card-metrics">
-              {typeof card.gravity === 'number' && <>g{Math.round(card.gravity)}</>}
-              {typeof card.heat === 'number' && <> · h{Math.round(card.heat)}</>}
+              {typeof card.gravity === 'number' && <Term k="gravity">g{Math.round(card.gravity)}</Term>}
+              {typeof card.heat === 'number' && <> · <Term k="heat">h{Math.round(card.heat)}</Term></>}
             </span>
           )}
         </div>

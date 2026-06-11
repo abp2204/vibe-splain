@@ -704,3 +704,81 @@ body::before {
   max-width: 400px;
   line-height: 1.7;
 }
+
+/* ── Glossary terms (hover / focus / tap to define) ───────── */
+.term {
+  position: relative;
+  cursor: help;
+  /* dotted underline = the "this is explainable" affordance */
+  text-decoration: underline dotted rgba(255, 255, 255, 0.35);
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  outline: none;
+  transition: text-decoration-color 0.15s ease;
+}
+/* When the term wraps a chip/badge, don't underline the whole box —
+   just signal it with a dotted bottom border on the inner element. */
+.term > .cat-chip,
+.term > .card-status,
+.term > .sev-pips {
+  text-decoration: none;
+}
+.term:hover,
+.term:focus-visible {
+  text-decoration-color: var(--accent-teal);
+}
+.term:focus-visible {
+  border-radius: 3px;
+  box-shadow: 0 0 0 2px var(--border-active);
+}
+
+.term-tip {
+  position: fixed;
+  transform: translate(-50%, calc(-100% - 10px));
+  z-index: 1000;
+  width: max-content;
+  max-width: 280px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-active);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-card);
+  text-align: left;
+  pointer-events: none;
+  animation: term-tip-in 0.12s ease;
+}
+@keyframes term-tip-in {
+  from { opacity: 0; transform: translate(-50%, calc(-100% - 4px)); }
+  to   { opacity: 1; transform: translate(-50%, calc(-100% - 10px)); }
+}
+/* little arrow */
+.term-tip::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 9px;
+  height: 9px;
+  background: var(--bg-elevated);
+  border-right: 1px solid var(--border-active);
+  border-bottom: 1px solid var(--border-active);
+}
+.term-tip-head {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--accent-teal);
+}
+.term-tip-body {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--text-primary);
+  white-space: normal;
+}

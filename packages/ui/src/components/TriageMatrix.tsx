@@ -1,6 +1,7 @@
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import type { DecisionCard } from '../types';
 import { categoryStyle } from '../categories';
+import { Term } from './Term';
 
 interface Props {
   cards: DecisionCard[];
@@ -14,15 +15,19 @@ type QuadKey = 'fixFirst' | 'isolatedDebt' | 'stableCore' | 'backwater';
 interface QuadMeta {
   key: QuadKey;
   title: string;
-  sub: string;
+  sub: ReactNode;
   accent: string;       // border / label color
 }
 
+const SMELLY = <Term k="smelly">smelly</Term>;
+const LOAD_BEARING = <Term k="loadBearing">load-bearing</Term>;
+const CLEAN = <Term k="clean">clean</Term>;
+
 const QUADS: Record<QuadKey, QuadMeta> = {
-  isolatedDebt: { key: 'isolatedDebt', title: 'Isolated Debt',  sub: 'smelly · not load-bearing', accent: '#f5a623' },
-  fixFirst:     { key: 'fixFirst',     title: '⚠ Fix First',    sub: 'load-bearing · smelly',     accent: '#ff4d5e' },
-  backwater:    { key: 'backwater',    title: 'Backwater',      sub: 'low impact · clean',         accent: '#6b7280' },
-  stableCore:   { key: 'stableCore',   title: '✦ Stable Core',  sub: 'load-bearing · clean',       accent: '#3ddc97' },
+  isolatedDebt: { key: 'isolatedDebt', title: 'Isolated Debt',  sub: <>{SMELLY} · not {LOAD_BEARING}</>, accent: '#f5a623' },
+  fixFirst:     { key: 'fixFirst',     title: '⚠ Fix First',    sub: <>{LOAD_BEARING} · {SMELLY}</>,     accent: '#ff4d5e' },
+  backwater:    { key: 'backwater',    title: 'Backwater',      sub: <>low impact · {CLEAN}</>,          accent: '#6b7280' },
+  stableCore:   { key: 'stableCore',   title: '✦ Stable Core',  sub: <>{LOAD_BEARING} · {CLEAN}</>,       accent: '#3ddc97' },
 };
 
 function median(nums: number[]): number {

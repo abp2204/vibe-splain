@@ -6,6 +6,7 @@ import { DecisionCardComponent } from './components/DecisionCard';
 import { EvidenceSidebar } from './components/EvidenceSidebar';
 import { TriageMatrix } from './components/TriageMatrix';
 import { StartHere } from './components/StartHere';
+import { Term } from './components/Term';
 
 function App() {
   const [dossier] = useState<Dossier>(() => window.__VIBE_DOSSIER__);
@@ -85,7 +86,7 @@ function App() {
 
         {wild.length > 0 && (
           <section className="wild-hero">
-            <div className="section-label hero-label">🔥 Wild Discoveries — important AND smelly</div>
+            <div className="section-label hero-label">🔥 <Term k="wildDiscoveries">Wild Discoveries</Term> — <Term k="loadBearing">important</Term> AND <Term k="smelly">smelly</Term></div>
             {wild.map(card => (
               <DecisionCardComponent
                 key={`wild-${card.id}`}
