@@ -37,7 +37,32 @@ function parseJsonLenient(text: string): unknown {
   }
 }
 
-// ── tsconfig.json alias extraction (with extends, max 3 levels) ──────────────
+// ── tsconfig.json alias extraction (with recursive discovery) ──────────────
+
+async function discoverAllTsConfigs(dir: string, projectRoot: string, maxDepth = 4): Promise<Record<string, string>> {
+  const result: Record<string, string> = {};
+  if (maxDepth < 0) return result;
+
+  const { readdir } = await import('fs/promises');
+  let entries: import('fs').Dirent[] = [];
+  try {
+    entries = await readdir(dir, { withFileTypes: true });
+  } catch { return result; }
+
+  for (const entry of entries) {
+    const fullPath = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (entry.name === 'node_modules' || entry.name === '.git') continue;
+      const sub = await discoverAllTsConfigs(fullPath, projectRoot, maxDepth - 1);
+      Object.assign(result, sub);
+    } else if (entry.name === 'tsconfig.json') {
+      const paths = await extractTsConfigPaths(fullPath, projectRoot);
+      Object.assign(result, paths);
+    }
+  }
+
+  return result;
+}
 
 async function extractTsConfigPaths(
   tsconfigPath: string,
@@ -49,29 +74,43 @@ async function extractTsConfigPaths(
   let raw: string;
   try { raw = await readFile(tsconfigPath, 'utf8'); } catch { return {}; }
 
-  const parsed = parseJsonLenient(raw) as Record<string, unknown> | null;
+  const parsed = parseJsonLenient(raw) as Record<string, any> | null;
   if (!parsed) return {};
 
   const result: Record<string, string> = {};
 
-  // Handle extends chain first (lower priority, overridden by own paths)
+  // Handle extends chain
   if (typeof parsed.extends === 'string') {
-    const baseFile = join(dirname(tsconfigPath), parsed.extends);
+    let baseFile = parsed.extends;
+    if (baseFile.startsWith('.')) {
+      baseFile = join(dirname(tsconfigPath), baseFile);
+    } else {
+      // Might be a node_modules base (e.g. @tsconfig/node18/tsconfig.json)
+      baseFile = join(projectRoot, 'node_modules', baseFile);
+      if (!baseFile.endsWith('.json')) baseFile += '.json';
+    }
     const base = await extractTsConfigPaths(baseFile, projectRoot, depth + 1);
     Object.assign(result, base);
   }
 
-  const opts = (parsed.compilerOptions as Record<string, unknown>) || {};
+  const opts = parsed.compilerOptions || {};
   const baseUrl = typeof opts.baseUrl === 'string'
     ? join(dirname(tsconfigPath), opts.baseUrl)
     : dirname(tsconfigPath);
 
-  const paths = (opts.paths as Record<string, string[]>) || {};
+  // ADR-020: If baseUrl is set, everything under it is an implicit alias
+  if (typeof opts.baseUrl === 'string') {
+    const relBase = relative(projectRoot, baseUrl);
+    if (relBase && relBase !== '.') {
+      result[''] = relBase; // special key for baseUrl-relative resolution
+    }
+  }
+
+  const paths = opts.paths || {};
   for (const [alias, targets] of Object.entries(paths)) {
     if (!Array.isArray(targets) || targets.length === 0) continue;
-    const first = targets[0].replace(/\/\*$/, '');
+    const first = (targets[0] as string).replace(/\/\*$/, '');
     const resolved = relative(projectRoot, join(baseUrl, first));
-    // Strip trailing /* from alias key too
     const key = alias.replace(/\/\*$/, '');
     result[key] = resolved;
   }
@@ -127,29 +166,6 @@ async function discoverWorkspacePackages(projectRoot: string): Promise<Record<st
   return packages;
 }
 
-// ── Per-app tsconfig paths ────────────────────────────────────────────────────
-
-async function discoverAppTsConfigPaths(projectRoot: string): Promise<Record<string, string>> {
-  const result: Record<string, string> = {};
-  const scanDirs = ['apps', 'packages'];
-
-  for (const scanDir of scanDirs) {
-    const absDir = join(projectRoot, scanDir);
-    if (!existsSync(absDir)) continue;
-    const { readdir } = await import('fs/promises');
-    try {
-      const entries = await readdir(absDir, { withFileTypes: true });
-      for (const entry of entries.filter(e => e.isDirectory())) {
-        const tsconfig = join(absDir, entry.name, 'tsconfig.json');
-        const paths = await extractTsConfigPaths(tsconfig, projectRoot);
-        Object.assign(result, paths);
-      }
-    } catch { continue; }
-  }
-
-  return result;
-}
-
 // ── Fallback conventional aliases ────────────────────────────────────────────
 
 const CONVENTIONAL_ALIASES: Array<{ prefix: string; replacement: string }> = [
@@ -169,22 +185,15 @@ const CONVENTIONAL_ALIASES: Array<{ prefix: string; replacement: string }> = [
 // ── Build the full alias map ──────────────────────────────────────────────────
 
 async function buildAliasMap(projectRoot: string): Promise<AliasMap> {
-  // 1. Root tsconfig.json
-  const rootPaths = await extractTsConfigPaths(
-    join(projectRoot, 'tsconfig.json'),
-    projectRoot,
-  );
+  // 1. Recursive tsconfig.json discovery (ADR-020)
+  const allPaths = await discoverAllTsConfigs(projectRoot, projectRoot);
 
   // 2. Workspace packages
   const workspacePackages = await discoverWorkspacePackages(projectRoot);
 
-  // 3. Per-app tsconfig paths (lower priority than root)
-  const appPaths = await discoverAppTsConfigPaths(projectRoot);
+  // Merge: tsconfig paths take precedence
+  const resolvedAliases: Record<string, string> = { ...allPaths };
 
-  // Merge: root paths win over app paths
-  const resolvedAliases: Record<string, string> = { ...appPaths, ...rootPaths };
-
-  // Add workspace package names as aliases (if not already in tsconfig paths)
   for (const [pkgName, pkgDir] of Object.entries(workspacePackages)) {
     if (!(pkgName in resolvedAliases)) {
       resolvedAliases[pkgName] = pkgDir;
@@ -268,12 +277,20 @@ export function resolveImportWithAliasMap(
 
     // Try tsconfig.json / workspace alias map
     for (const [prefix, replacement] of Object.entries(aliasMap.resolvedAliases)) {
+      if (prefix === '') continue; // skip baseUrl marker
       if (spec === prefix || spec.startsWith(prefix + '/')) {
         const rest = spec.slice(prefix.length).replace(/^\//, '');
         const base = join(projectRoot, replacement, rest);
         const resolved = tryJsCandidates(base, projectRoot, fileSet);
-        return { resolved, isAlias: true, reason: resolved ? undefined : `alias '${prefix}' found but path '${replacement}/${rest}' not in file set` };
+        if (resolved) return { resolved, isAlias: true };
       }
+    }
+
+    // ADR-020: baseUrl absolute imports (marker '')
+    if (aliasMap.resolvedAliases[''] !== undefined) {
+      const base = join(projectRoot, aliasMap.resolvedAliases[''], spec);
+      const resolved = tryJsCandidates(base, projectRoot, fileSet);
+      if (resolved) return { resolved, isAlias: true };
     }
 
     // Try workspace packages (package name → dir)
@@ -282,7 +299,7 @@ export function resolveImportWithAliasMap(
         const rest = spec.slice(pkgName.length).replace(/^\//, '');
         const base = join(projectRoot, pkgDir, rest);
         const resolved = tryJsCandidates(base, projectRoot, fileSet);
-        return { resolved, isAlias: true, reason: resolved ? undefined : `workspace package '${pkgName}' found but subpath '${rest}' not in file set` };
+        if (resolved) return { resolved, isAlias: true };
       }
     }
 
@@ -292,7 +309,7 @@ export function resolveImportWithAliasMap(
         const rest = replacement + spec.slice(prefix.length);
         const base = join(projectRoot, rest);
         const resolved = tryJsCandidates(base, projectRoot, fileSet);
-        return { resolved, isAlias: true, reason: resolved ? undefined : `conventional alias '${prefix}' → path not found` };
+        if (resolved) return { resolved, isAlias: true };
       }
     }
 
@@ -301,6 +318,7 @@ export function resolveImportWithAliasMap(
 
   return { resolved: resolveGeneric(spec, projectRoot, fileSet, basenameIndex), isAlias: false };
 }
+
 
 // ── Main stage implementation ─────────────────────────────────────────────────
 

@@ -795,3 +795,22 @@ body::before {
   color: var(--text-primary);
   white-space: normal;
 }
+
+.validation-warning {
+  background: #3a1515;
+  color: #ff9999;
+  border: 1px solid #662222;
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  font-size: 13px;
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
+}
+
+.validation-warning code {
+  background: #4a1c1c;
+  color: #ffbbbb;
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+}

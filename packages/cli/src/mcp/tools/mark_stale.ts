@@ -1,4 +1,5 @@
-import { readDossier, writeDossier } from '@vibe-splain/brain';
+import { readDossier } from '@vibe-splain/brain';
+import { ExportOrchestrator } from '../../export/ExportOrchestrator.js';
 
 export const markStaleTool = {
   name: 'mark_stale',
@@ -20,7 +21,7 @@ export const markStaleTool = {
   },
 };
 
-export async function handleMarkStale(args: Record<string, unknown>): Promise<unknown> {
+export async function handleMarkStale(args: Record<string, unknown>, options: any = {}): Promise<unknown> {
   const projectRoot = args.projectRoot as string;
   const filePaths = args.filePaths as string[];
   if (!projectRoot || !filePaths) throw new Error('projectRoot and filePaths are required');
@@ -49,7 +50,12 @@ export async function handleMarkStale(args: Record<string, unknown>): Promise<un
     }
   }
 
-  await writeDossier(projectRoot, dossier);
+  const orchestrator = new ExportOrchestrator(projectRoot);
+  await orchestrator.writeBundle(dossier, {
+    format: options.format,
+    budget: options.budget ? parseInt(options.budget, 10) : undefined,
+    scope: options.scope,
+  });
 
   return {
     success: true,

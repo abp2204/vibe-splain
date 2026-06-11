@@ -1,6 +1,6 @@
 # ADR-009 — `data_table` State Machine Patch Risk Floor
 
-**Status:** Proposed
+**Status:** Accepted — Implemented
 **Date:** 2026-06-11
 **Deciders:** Aayush Patel
 

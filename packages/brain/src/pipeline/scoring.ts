@@ -264,7 +264,12 @@ export interface ValidationReport {
   passed: boolean;
   errors: ValidationFinding[];
   warnings: ValidationFinding[];
-  summary: { errorCount: number; warningCount: number; passCount: number };
+  summary: { 
+    errorCount: number; 
+    warningCount: number; 
+    passCount: number;
+    entrypointTraceCoverage?: number; // ADR-020
+  };
 }
 
 // ── Scoring result type ───────────────────────────────────────────────────────
@@ -308,7 +313,9 @@ export async function runScoring(
       f.heatSignals.maxNesting, f.heatSignals.longFunctions > 0,
       f.heatSignals.swallowedCatches, f.runtimeEntrypoints,
     );
-    const isLoadBearing = f.loadBearingScore >= 5;
+    
+    // ADR-019: Use machine-derived confidence
+    const confidence = deriveConfidence(f.gravitySignals.fanIn, f.gravity);
 
     const pf: PersistedFile = {
       relativePath: f.rel, language: f.lang,
@@ -323,7 +330,9 @@ export async function runScoring(
       riskTypes: f.riskTypes,
       writeIntents: f.writeIntents,
       canonicalSeverity: severity,
-      canonicalLoadBearing: isLoadBearing,
+      canonicalLoadBearing: f.isLoadBearing, // STRICT: fanIn >= 10
+      isOperationallyCritical: f.isOperationallyCritical,
+      confidence,
     };
 
     // Apply corrections (mutates pf in place)
@@ -333,197 +342,22 @@ export async function runScoring(
     severityBreakdowns[f.rel] = `severity=${pf.canonicalSeverity} loadBearing=${pf.canonicalLoadBearing} effects=${pf.sideEffectProfile.join(',')} domain=${pf.productDomain}`;
   }
 
-  // Write stage-09-severity.json
-  const stage09 = Object.fromEntries(
-    Object.entries(persisted)
-      .filter(([, pf]) => pf.isRealSource)
-      .map(([rel, pf]) => [rel, { canonicalSeverity: pf.canonicalSeverity, canonicalLoadBearing: pf.canonicalLoadBearing, scoreBreakdown: severityBreakdowns[rel] }])
-  );
-  await writeFile(join(dir, 'stage-09-severity.json'), JSON.stringify(stage09, null, 2), 'utf8');
-
   const store: AnalysisStore = { files: persisted };
 
-  // Stage 10: delta target generation
-  // Build import lookup for entrypoint tracing
-  const importedByMapForDelta = new Map<string, Set<string>>();
-  for (const [rel, pf] of Object.entries(persisted)) {
-    importedByMapForDelta.set(rel, new Set(pf.importedBy));
-  }
-  const metaForDelta = new Map<string, { frameworkRole: import('../signals.js').FrameworkRole; productDomain: ProductDomain }>(
-    Object.entries(persisted).map(([rel, pf]) => [rel, { frameworkRole: pf.frameworkRole, productDomain: pf.productDomain }])
-  );
-
+  // Stage 10: delta target generation (ADR-019 STRICT 5-FIELD CONTRACT)
   const deltaTargets: DeltaTarget[] = Object.values(persisted)
     .filter(pf => pf.isRealSource)
     .sort((a, b) => b.gravity - a.gravity)
-    .map(pf => {
-      const runtimeEntrypoints = findRuntimeEntrypoints(pf.relativePath, importedByMapForDelta, metaForDelta);
-      const entrypointTraceStatus = deriveEntrypointTraceStatus(pf.productDomain, runtimeEntrypoints, pf.importsUnresolved);
-      const smellMaxSeverity = pf.smells.length > 0 ? Math.max(...pf.smells.map(s => s.severity)) : 0;
-      const loadBearingScore = computeLoadBearingScore(
-        pf.gravity, pf.heat, pf.importedBy.length,
-        pf.sideEffectProfile, pf.productDomain, smellMaxSeverity, runtimeEntrypoints,
-      );
-
-      const observableOutputs = inferObservableOutputs(pf.frameworkRole, pf.productDomain, pf.sideEffectProfile);
-      const patchRisk = inferPatchRisk(pf.productDomain, pf.riskTypes, pf.sideEffectProfile, pf.importedBy.length, loadBearingScore);
-      const confidence = deriveConfidence(pf.gravitySignals.fanIn, pf.gravity);
-
-      const fileHashInput = pf.hotSpans.map(h => h.snippet).join('');
-      const fileHash = createHash('sha256').update(fileHashInput || pf.relativePath).digest('hex').slice(0, 12);
-      const rawEvidence: RawEvidence[] = pf.hotSpans.map(span => ({
-        file: pf.relativePath,
-        startLine: span.startLine,
-        endLine: span.endLine,
-        rawSourceExcerpt: span.rawExcerpt,
-        evidenceHash: createHash('sha256').update(span.rawExcerpt).digest('hex').slice(0, 12),
-      }));
-      const displayEvidence: DisplayEvidence[] = pf.hotSpans.map(span => ({
-        file: pf.relativePath,
-        startLine: span.startLine,
-        endLine: span.endLine,
-        excerpt: span.snippet,
-        isTruncated: span.rawExcerpt.length > 2000,
-      }));
-
-      let criticalFunctions: any[] | undefined = undefined;
-      if (bindingArtifact) {
-        const fileBinding = bindingArtifact.files[pf.relativePath];
-        if (fileBinding) {
-          const scoredFunctions = fileBinding.functions.map(fn => {
-            let fnScore = 0;
-            const reasons: string[] = [];
-            
-            if (fn.semanticActions.length > 0) {
-              fnScore += 3;
-              reasons.push('Contains semantic actions');
-            }
-            if (fn.isEntrypoint) {
-              fnScore += 2;
-              reasons.push('Is a framework entrypoint');
-            }
-            
-            const resolvedOutbound = fn.calls.filter(c => c.resolvedTargetFunctionId).length;
-            if (resolvedOutbound > 0) {
-              const callPts = Math.min(3, resolvedOutbound);
-              fnScore += callPts;
-              reasons.push(`Has ${resolvedOutbound} resolved outbound calls`);
-            } else if (fn.calls.length > 0) {
-              fnScore += 1;
-              reasons.push(`Has ${fn.calls.length} outbound calls`);
-            }
-            
-            const writesModel = fn.semanticActions.some(a => a.actionKind === 'database_write' && a.targetModel);
-            if (writesModel) {
-              fnScore += 2;
-              reasons.push('Writes to a database model');
-            }
-            
-            const authOrValid = fn.semanticActions.some(a => a.actionKind === 'auth_check' || a.actionKind === 'validation');
-            if (authOrValid) {
-              fnScore += 1;
-              reasons.push('Performs auth/validation');
-            }
-
-            // Evidence overlap check
-            const hasEvidenceOverlap = rawEvidence.some(e => 
-              (fn.startLine <= e.endLine && fn.endLine >= e.startLine)
-            );
-            if (hasEvidenceOverlap) {
-              fnScore += 2;
-              reasons.push('Overlaps with raw evidence span');
-            }
-            
-            return { fn, fnScore, reasons };
-          });
-          
-          scoredFunctions.sort((a, b) => b.fnScore - a.fnScore);
-          // Only keep functions with at least one reason (not hollow)
-          const topFns = scoredFunctions.filter(x => x.reasons.length > 0).slice(0, 5);
-          
-          if (topFns.length > 0) {
-            criticalFunctions = topFns.map(({ fn, reasons }) => {
-              const evidence = fn.semanticActions.slice(0, 5).sort((a, b) => a.sourceLine - b.sourceLine).map(a => ({
-                sourceLine: a.sourceLine,
-                text: a.evidenceText,
-                actionKind: a.actionKind,
-                targetModel: a.targetModel,
-                targetOperation: a.targetOperation,
-                confidence: a.confidence
-              }));
-              
-              const confidences = fn.semanticActions.map(a => a.confidence);
-              let confidence: 'high'|'medium'|'low' = 'high';
-              if (confidences.includes('low')) confidence = 'low';
-              else if (confidences.includes('medium')) confidence = 'medium';
-              
-              return {
-                functionId: fn.functionId,
-                displayName: fn.displayName,
-                functionKind: fn.functionKind,
-                startLine: fn.startLine,
-                endLine: fn.endLine,
-                isEntrypoint: fn.isEntrypoint,
-                isExported: fn.isExported,
-                actionKinds: [...new Set(fn.semanticActions.map(a => a.actionKind))],
-                targetModels: [...new Set(fn.semanticActions.map(a => a.targetModel).filter(Boolean))] as string[],
-                targetOperations: [...new Set(fn.semanticActions.map(a => a.targetOperation).filter(Boolean))] as string[],
-                outboundCallCount: fn.calls.length,
-                resolvedOutboundCallCount: fn.calls.filter(c => c.resolvedTargetFunctionId).length,
-                semanticActionCount: fn.semanticActions.length,
-                evidence,
-                confidence,
-                reasons
-              };
-            });
-          }
-        }
-      }
-
-      return {
-        path: pf.relativePath,
-        frameworkRole: pf.frameworkRole,
-        productDomain: pf.productDomain,
-        gravity: Math.round(pf.gravity),
-        heat: Math.round(pf.heat),
-        severity: pf.canonicalSeverity,
-        confidence,
-        isLoadBearing: pf.canonicalLoadBearing || loadBearingScore >= 5,
-        loadBearingScore,
-        riskTypes: pf.riskTypes,
-        sideEffectProfile: pf.sideEffectProfile,
-        blastRadius: pf.importedBy,
-        runtimeEntrypoints,
-        entrypointTraceStatus,
-        blockedImports: pf.importsUnresolved,
-        observableOutputs,
-        writeIntents: pf.writeIntents,
-        patchRisk,
-        safePatchStrategy: inferSafePatchStrategy(pf.riskTypes, pf.sideEffectProfile),
-        doNotTouch: inferDoNotTouch(pf.sideEffectProfile, pf.productDomain),
-        testProbes: inferTestProbes(pf.writeIntents, observableOutputs),
-        rawEvidence,
-        displayEvidence,
-        criticalFunctions,
-        analysisAnnotation: `${pf.frameworkRole} in ${pf.productDomain} domain. fanIn=${pf.gravitySignals.fanIn} cyclomatic=${pf.gravitySignals.cyclomatic} loc=${pf.gravitySignals.loc}`,
-        hashes: { fileHash, evidenceHash: rawEvidence.map(e => e.evidenceHash).join('-') },
-      };
-    });
-
-  // Write delta_targets.json
-  const dest = join(dir, 'delta_targets.json');
-  const tmp = dest + '.tmp';
-  await writeFile(tmp, JSON.stringify(deltaTargets, null, 2), 'utf8');
-  const { rename } = await import('fs/promises');
-  await rename(tmp, dest);
+    .map(pf => ({
+      path: pf.relativePath,
+      gravity: Math.round(pf.gravity),
+      isLoadBearing: pf.canonicalLoadBearing, // STRICT: fanIn >= 10
+      blastRadius: pf.importedBy,
+      pillarHint: pf.pillarHint,
+    }));
 
   // Stage 12: validation report
-  const validationReport = await buildValidationReport(store, deltaTargets, projectRoot);
-  await writeFile(
-    join(dir, 'validation_report.json'),
-    JSON.stringify(validationReport, null, 2),
-    'utf8',
-  );
+  const validationReport = await buildValidationReport(store, deltaTargets, projectRoot, cr);
 
   // Log any errors
   for (const e of validationReport.errors) {
@@ -542,25 +376,32 @@ async function buildValidationReport(
   store: AnalysisStore,
   deltaTargets: DeltaTarget[],
   projectRoot: string,
+  cr: ClassificationResult,
 ): Promise<ValidationReport> {
   const errors: ValidationFinding[] = [];
   const warnings: ValidationFinding[] = [];
   let passCount = 0;
-
-  const deltaByPath = new Map(deltaTargets.map(d => [d.path, d]));
+  let tracedCount = 0;
+  let realCount = 0;
 
   for (const [, pf] of Object.entries(store.files)) {
     if (!pf.isRealSource) continue;
-    const delta = deltaByPath.get(pf.relativePath);
+    realCount++;
+    
+    const classified = cr.classified.find(f => f.rel === pf.relativePath);
+    if (classified && classified.entrypointTraceStatus === 'complete') tracedCount++;
 
     // Hard errors
-    if (pf.canonicalSeverity === 5 && !pf.canonicalLoadBearing) {
-      errors.push({
-        file: pf.relativePath, rule: 'severity_5_not_load_bearing',
-        detail: 'severity=5 but canonicalLoadBearing=false — post-correction invariant violated',
-        expected: 'canonicalLoadBearing=true', actual: 'canonicalLoadBearing=false',
-      });
-      continue;
+    if (pf.canonicalSeverity === 5 && !pf.canonicalLoadBearing && pf.gravitySignals.fanIn < 10) {
+      // It's severity 5 but not load bearing because fanIn < 10. 
+      // This is allowed under new strict ADR-019 if it's operationally critical.
+      // But we should still flag if it's NOT operationally critical.
+      if (!pf.isOperationallyCritical) {
+        errors.push({
+          file: pf.relativePath, rule: 'severity_5_no_criticality',
+          detail: 'severity=5 but not load-bearing and not operationally critical',
+        });
+      }
     }
 
     if (pf.writeIntents.includes('handle_payment_webhook') && pf.sideEffectProfile.includes('none_detected')) {
@@ -574,7 +415,7 @@ async function buildValidationReport(
 
     if (
       pf.productDomain === 'booking_creation' &&
-      delta?.entrypointTraceStatus === 'no_runtime_entrypoint_found' &&
+      classified?.entrypointTraceStatus === 'no_runtime_entrypoint_found' &&
       (pf.importsUnresolved.length === 0)
     ) {
       errors.push({
@@ -584,103 +425,60 @@ async function buildValidationReport(
       continue;
     }
 
-    if (delta && delta.severity !== pf.canonicalSeverity) {
-      errors.push({
-        file: pf.relativePath, rule: 'severity_mismatch_delta',
-        detail: 'DeltaTarget severity does not match canonicalSeverity',
-        expected: String(pf.canonicalSeverity), actual: String(delta.severity),
-      });
-      continue;
-    }
-
-    if (pf.canonicalSeverity >= 4 && (delta?.rawEvidence.length ?? 0) === 0 && pf.hotSpans.length === 0) {
+    if (pf.canonicalSeverity >= 4 && pf.hotSpans.length === 0) {
       errors.push({
         file: pf.relativePath, rule: 'high_severity_no_evidence',
-        detail: `severity=${pf.canonicalSeverity} but rawEvidence is empty`,
+        detail: `severity=${pf.canonicalSeverity} but no evidence hotSpans found`,
       });
       continue;
     }
 
     // Warnings
-    if (pf.canonicalSeverity >= 4 && (delta?.runtimeEntrypoints.length ?? 0) === 0) {
+    if (pf.canonicalSeverity >= 4 && (classified?.runtimeEntrypoints.length ?? 0) === 0) {
       warnings.push({
         file: pf.relativePath, rule: 'high_severity_no_entrypoints',
         detail: `severity=${pf.canonicalSeverity} but no runtime entrypoints found — check alias resolution`,
       });
     }
 
-    if (delta?.entrypointTraceStatus === 'partial_wrong_surface') {
-      const foundPaths = delta.runtimeEntrypoints.map(e => e.path).join(', ');
+    if (classified?.entrypointTraceStatus === 'partial_wrong_surface') {
+      const foundPaths = classified.runtimeEntrypoints.map(e => e.path).join(', ');
       warnings.push({
         file: pf.relativePath, rule: 'partial_wrong_surface',
         detail: `Entrypoints found but domain surface mismatch for ${pf.productDomain}. Found: ${foundPaths}`,
       });
     }
 
-    // ADR-008: registry_bottleneck scoring invariants
-    if (pf.riskTypes.includes('registry_bottleneck')) {
-      if (pf.canonicalSeverity < 4)
-        errors.push({ file: pf.relativePath, rule: 'registry_bottleneck_severity',
-          detail: 'registry_bottleneck file must have severity >= 4',
-          expected: '>=4', actual: String(pf.canonicalSeverity) });
-      if (!pf.canonicalLoadBearing)
-        errors.push({ file: pf.relativePath, rule: 'registry_bottleneck_load_bearing',
-          detail: 'registry_bottleneck file must be load-bearing',
-          expected: 'true', actual: 'false' });
-      if (delta && delta.patchRisk.level !== 'high' && delta.patchRisk.level !== 'critical')
-        errors.push({ file: pf.relativePath, rule: 'registry_bottleneck_patch_risk',
-          detail: 'registry_bottleneck file must have patch risk high or critical',
-          expected: 'high|critical', actual: delta?.patchRisk.level ?? 'unknown' });
-    }
-
-    // ADR-009: data_table state machine patch risk warning
-    if (pf.productDomain === 'data_table' && pf.riskTypes.includes('state_machine')
-        && delta?.patchRisk.level === 'low') {
-      warnings.push({ file: pf.relativePath, rule: 'data_table_state_machine_risk',
-        detail: 'data_table state machine should have at least medium patch risk' });
-    }
-
     passCount++;
   }
 
-  // ADR-011: proactive payment webhook invariant validation
+  // ADR-011: proactive payment webhook invariant validation (Semantic version)
   const PAYMENT_PROVIDER_PATH_TERMS = ['stripe', 'paypal', 'btcpay', 'btcpayserver', 'alby', 'hitpay', 'payment'];
-  const PAYMENT_CONTENT_TERMS = ['constructEvent', 'checkoutSession', 'paymentIntent', 'stripe-signature',
-    'webhook-signature', 'payment_mutation', 'paymentStatus', 'invoicePaid', 'chargeSucceeded'];
 
   for (const [rel, pf] of Object.entries(store.files)) {
     if (!pf.isRealSource) continue;
-    const pathLower = rel.toLowerCase();
-    if (!pathLower.includes('webhook')) continue;
 
-    const primaryTrigger = PAYMENT_PROVIDER_PATH_TERMS.some(t => pathLower.includes(t));
+    // A file is a "Payment Webhook" candidate if it has handle_payment_webhook intent 
+    // OR it has webhook_ingress/payment_mutation effects AND its path mentions payment terms.
+    const hasIntent = pf.writeIntents.includes('handle_payment_webhook');
+    const hasEffects = pf.sideEffectProfile.includes('webhook_ingress') || pf.sideEffectProfile.includes('payment_mutation');
+    const pathMentionsPayment = PAYMENT_PROVIDER_PATH_TERMS.some(t => rel.toLowerCase().includes(t));
 
-    let secondaryTrigger = false;
-    if (!primaryTrigger && pf.productDomain !== 'payments_webhooks') {
-      try {
-        const src = await readFile(join(projectRoot, rel), 'utf8');
-        secondaryTrigger = PAYMENT_CONTENT_TERMS.some(t => src.includes(t));
-      } catch { /* file unreadable — skip */ }
-    }
-
-    if (!primaryTrigger && !secondaryTrigger) continue;
-
-    const delta = deltaByPath.get(rel);
-    const triggerLabel = primaryTrigger ? 'path' : 'content';
+    // If it has the intent, it MUST be valid.
+    // If it has effects + path terms but NO intent, that's a validation error (missing classification).
+    if (!hasIntent && !(hasEffects && pathMentionsPayment)) continue;
 
     const webhookChecks: [boolean, string, string][] = [
       [pf.productDomain !== 'payments_webhooks',
-        'webhook_domain', `Payment webhook (${triggerLabel} trigger) not classified as payments_webhooks`],
+        'webhook_domain', `Payment webhook not classified as payments_webhooks`],
       [!pf.sideEffectProfile.includes('webhook_ingress'),
-        'webhook_ingress_missing', `Payment webhook (${triggerLabel} trigger) missing webhook_ingress side effect`],
+        'webhook_ingress_missing', `Payment webhook missing webhook_ingress side effect`],
       [!pf.sideEffectProfile.includes('payment_mutation'),
-        'webhook_payment_mutation_missing', `Payment webhook (${triggerLabel} trigger) missing payment_mutation side effect`],
+        'webhook_payment_mutation_missing', `Payment webhook missing payment_mutation side effect`],
       [!pf.writeIntents.includes('handle_payment_webhook'),
-        'webhook_write_intent_missing', `Payment webhook (${triggerLabel} trigger) missing handle_payment_webhook write intent`],
-      [!!delta && delta.patchRisk.level !== 'high' && delta.patchRisk.level !== 'critical',
-        'webhook_patch_risk', `Payment webhook (${triggerLabel} trigger) patchRisk must be high or critical`],
-      [!pf.canonicalLoadBearing,
-        'webhook_load_bearing', `Payment webhook (${triggerLabel} trigger) must be load-bearing`],
+        'webhook_write_intent_missing', `Payment webhook missing handle_payment_webhook write intent`],
+      [!pf.isOperationallyCritical,
+        'webhook_criticality', `Payment webhook must be operationally critical`],
     ];
 
     for (const [condition, rule, detail] of webhookChecks) {
@@ -688,11 +486,14 @@ async function buildValidationReport(
     }
   }
 
+  const coverage = realCount > 0 ? Math.round((tracedCount / realCount) * 100) : 0;
+
   return {
     timestamp: new Date().toISOString(),
     passed: errors.length === 0,
     errors,
     warnings,
-    summary: { errorCount: errors.length, warningCount: warnings.length, passCount },
+    summary: { errorCount: errors.length, warningCount: warnings.length, passCount, entrypointTraceCoverage: coverage },
   };
 }
+

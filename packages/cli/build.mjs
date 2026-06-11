@@ -14,9 +14,12 @@ await build({
   external: [
     '@modelcontextprotocol/sdk',
     'async-mutex',
+    'better-sqlite3',
     'chokidar',
     'commander',
     'fs-extra',
+    'minimatch',
+    'tar',
     'tree-sitter-wasms',
     'uuid',
     'web-tree-sitter',

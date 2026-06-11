@@ -243,7 +243,7 @@ export function deriveEntrypointTraceStatus(
   domain: ProductDomain,
   entrypoints: RuntimeEntrypoint[],
   unresolved: string[],
-): DeltaTarget['entrypointTraceStatus'] {
+): 'complete' | 'partial' | 'partial_wrong_surface' | 'blocked_by_alias_resolution' | 'no_runtime_entrypoint_found' {
   if (entrypoints.length === 0 && unresolved.length > 0) return 'blocked_by_alias_resolution';
   if (entrypoints.length === 0) return 'no_runtime_entrypoint_found';
 
@@ -382,9 +382,11 @@ export interface ClassifiedFile {
   writeIntents: WriteIntent[];
   riskTypes: RiskType[];
   runtimeEntrypoints: RuntimeEntrypoint[];
-  entrypointTraceStatus: DeltaTarget['entrypointTraceStatus'];
+  entrypointTraceStatus: 'complete' | 'partial' | 'partial_wrong_surface' | 'blocked_by_alias_resolution' | 'no_runtime_entrypoint_found';
   blockedImports: string[];
   loadBearingScore: number;
+  isOperationallyCritical: boolean; // ADR-019
+  isLoadBearing: boolean;          // ADR-019 STRICT: fanIn >= 10
   hotSpans: HotSpan[];
   source: string;
 }
@@ -397,6 +399,7 @@ export interface ClassificationResult {
   map: ProjectMap;
   communities: Map<string, number>;
 }
+
 
 // ── Pillar building helpers ───────────────────────────────────────────────────
 
@@ -738,6 +741,10 @@ export async function runClassification(
       gravity, heat, fanIn, effects, w.productDomain, smellMaxSeverity, runtimeEntrypoints,
     );
 
+    // ADR-019 STRICT definitions
+    const isLoadBearing = fanIn >= 10;
+    const isOperationallyCritical = loadBearingScore >= 5;
+
     classified.push({
       rel: w.rel, abs: w.abs, lang: w.lang,
       isRealSource: real, demoteReason: demoteReason.get(w.rel) || null,
@@ -748,7 +755,10 @@ export async function runClassification(
       sideEffectProfile: effects, writeIntents, riskTypes,
       runtimeEntrypoints, entrypointTraceStatus,
       blockedImports: importsUnresolvedArr,
-      loadBearingScore, hotSpans: w.ast.hotSpans, source: w.source,
+      loadBearingScore, 
+      isOperationallyCritical,
+      isLoadBearing,
+      hotSpans: w.ast.hotSpans, source: w.source,
     });
   }
 
@@ -766,7 +776,8 @@ export async function runClassification(
   await writeFile(join(dir, 'stage-07-risk-types.json'), JSON.stringify(stage07, null, 2), 'utf8');
 
   const stage08 = Object.fromEntries(classified.map(f => [f.rel, {
-    isLoadBearing: f.loadBearingScore >= 5,
+    isLoadBearing: f.isLoadBearing,
+    isOperationallyCritical: f.isOperationallyCritical,
     loadBearingScore: f.loadBearingScore,
     runtimeEntrypoints: f.runtimeEntrypoints.length,
     entrypointTraceStatus: f.entrypointTraceStatus,

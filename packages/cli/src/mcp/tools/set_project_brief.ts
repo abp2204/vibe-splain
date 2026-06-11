@@ -1,4 +1,5 @@
-import { readDossier, writeDossier } from '@vibe-splain/brain';
+import { readDossier } from '@vibe-splain/brain';
+import { ExportOrchestrator } from '../../export/ExportOrchestrator.js';
 
 export const setProjectBriefTool = {
   name: 'set_project_brief',
@@ -13,7 +14,7 @@ export const setProjectBriefTool = {
   },
 };
 
-export async function handleSetProjectBrief(args: Record<string, unknown>): Promise<unknown> {
+export async function handleSetProjectBrief(args: Record<string, unknown>, options: any = {}): Promise<unknown> {
   const projectRoot = args.projectRoot as string;
   const brief = args.brief as string;
   if (!projectRoot || !brief) throw new Error('projectRoot and brief are required');
@@ -24,7 +25,12 @@ export async function handleSetProjectBrief(args: Record<string, unknown>): Prom
   }
 
   dossier.map.brief = brief;
-  await writeDossier(projectRoot, dossier);
+  const orchestrator = new ExportOrchestrator(projectRoot);
+  await orchestrator.writeBundle(dossier, {
+    format: options.format,
+    budget: options.budget ? parseInt(options.budget, 10) : undefined,
+    scope: options.scope,
+  });
 
   // Drive the loop: hand back the exact remaining worklist so the agent does
   // not stop and ask the user. Weak models treat "brief saved" as done otherwise.

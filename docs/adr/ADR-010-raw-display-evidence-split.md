@@ -1,6 +1,6 @@
 # ADR-010 — `rawEvidence`/`displayEvidence` Split
 
-**Status:** Proposed
+**Status:** Accepted — Implemented
 **Date:** 2026-06-11
 **Deciders:** Aayush Patel
 

@@ -29,7 +29,8 @@ export interface ScanResult {
   map: ProjectMap;
   wildCandidates: FileAnalysis[];
   uiUrl: string;
-  graph: ImportGraph;
+  graph: import('./graph.js').ImportGraph;
+  store: import('./analysis.js').AnalysisStore;
   validation?: {
     passed: boolean;
     errors: number;

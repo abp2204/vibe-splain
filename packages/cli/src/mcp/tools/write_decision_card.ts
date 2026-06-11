@@ -1,5 +1,6 @@
-import { readDossier, writeDossier, validateMermaidNodeCount, readAnalysis } from '@vibe-splain/brain';
+import { readDossier, validateMermaidNodeCount, readAnalysis } from '@vibe-splain/brain';
 import type { DecisionCard, Evidence, CardCategory } from '@vibe-splain/brain';
+import { ExportOrchestrator } from '../../export/ExportOrchestrator.js';
 import { v4 as uuidv4 } from 'uuid';
 import { createHash } from 'crypto';
 import { readFile } from 'fs/promises';
@@ -54,7 +55,7 @@ export const writeDecisionCardTool = {
   },
 };
 
-export async function handleWriteDecisionCard(args: Record<string, unknown>): Promise<unknown> {
+export async function handleWriteDecisionCard(args: Record<string, unknown>, options: any = {}): Promise<unknown> {
   const projectRoot = args.projectRoot as string;
   const pillar = args.pillar as string;
   const primaryFile = args.primaryFile as string;
@@ -103,9 +104,16 @@ export async function handleWriteDecisionCard(args: Record<string, unknown>): Pr
     dossier.wildDiscoveries = dossier.wildDiscoveries.filter(c => c.id !== existing.id);
   }
 
-  // Auto-carry gravity/heat from the scan.
+  // ADR-019: machine-derived confidence cap
   const store = await readAnalysis(projectRoot);
   const persisted = store?.files[primaryFile];
+  const machineConfidence = persisted?.confidence || 'low';
+  
+  const confidenceOrder = { low: 0, medium: 1, high: 2 };
+  if (confidenceOrder[confidence] > confidenceOrder[machineConfidence]) {
+    throw new Error(`Requested confidence "${confidence}" exceeds machine-derived confidence "${machineConfidence}" for this file. Ground your narrative in the MRI evidence.`);
+  }
+
   const gravity = persisted ? Math.round(persisted.gravity) : undefined;
   const heat = persisted ? Math.round(persisted.heat) : undefined;
 
@@ -137,7 +145,12 @@ export async function handleWriteDecisionCard(args: Record<string, unknown>): Pr
   bucket.decisions.push(card);
   bucket.cardCount = bucket.decisions.length;
 
-  await writeDossier(projectRoot, dossier);
+  const orchestrator = new ExportOrchestrator(projectRoot);
+  await orchestrator.writeBundle(dossier, {
+    format: options.format,
+    budget: options.budget ? parseInt(options.budget, 10) : undefined,
+    scope: options.scope,
+  });
 
   console.error(`[vibe-splain] Card written: "${title}" [${category} sev${severity}] in "${pillar}"${isWild ? ' (Wild Discovery)' : ''}`);
 

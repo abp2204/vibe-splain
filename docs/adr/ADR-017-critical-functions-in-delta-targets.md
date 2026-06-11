@@ -1,6 +1,6 @@
 # ADR-017 — criticalFunctions Enrichment of delta_targets.json
 
-**Status:** Accepted — Pending Implementation  
+**Status:** Accepted — Implemented
 **Date:** 2026-06-11  
 **Deciders:** Aayush Patel
 

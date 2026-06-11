@@ -19,6 +19,9 @@ npm install
 # Full build (brain → cli → ui → bundle-ui, must run in order)
 npm run build
 
+# Run regression test suite (sequentially)
+npm run test:regression
+
 # Dev server for UI only
 npm run dev:ui
 
@@ -34,8 +37,6 @@ node packages/cli/dist/index.js serve
 # Publish to npm (runs full build first)
 npm run release
 ```
-
-There are no test scripts — manual testing is done by running `install` and `serve` against a real project.
 
 ## Architecture
 
@@ -68,9 +69,9 @@ packages/
 
 **WASM init is once-per-process.** `Parser.init()` in `scanner.ts` must be called once at startup, before any file parsing. It is async; the scan pipeline awaits it.
 
-**`write_decision_card` and `mark_stale` must always call `regenerateUI()`** after mutating `dossier.json`, so `index.html` stays in sync with the data.
+**`write_decision_card` and `mark_stale` must always call `orchestrator.writeBundle()`** after mutating `dossier.json`, so all artifacts (HTML, MD, JSON) stay in sync.
 
-**`regenerateUI` injection marker:** The dossier JSON is injected using an HTML comment marker (`<!-- VIBE_DOSSIER_INJECTION_POINT -->`) as the insertion point — NOT by searching for `</head>`. Minified single-file bundles collapse `</head>`, making string-replace unreliable. Keep this marker in the UI template.
+**UI Injection marker:** The dossier JSON is injected into `index.html` using an HTML comment marker (`<!-- VIBE_DOSSIER_INJECTION_POINT -->`) as the insertion point. Keep this marker in the UI template.
 
 **Template path after esbuild bundling:** When `brain` is inlined into the CLI bundle, `import.meta.url` resolves relative to the bundle entrypoint, not the source file. The UI template path (`cli/dist/ui/index.html`) must be resolved relative to the CLI entrypoint, not relative to `dossier.ts`.
 
@@ -118,3 +119,4 @@ Initialize with `startOnLoad: false`. Render imperatively via `mermaid.render()`
 ## Vite UI Build
 
 `vite.config.ts` uses `vite-plugin-singlefile` and `base: './'` so the output is a single self-contained `index.html` that works from any `file://` path. Do not change `base` — it will break the UI for all users.
+ from any `file://` path. Do not change `base` — it will break the UI for all users.

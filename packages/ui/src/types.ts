@@ -50,6 +50,11 @@ export interface ProjectMap {
   topGravity: string[];
   topHeat: string[];
   brief: string | null;
+  validation?: {
+    passed: boolean;
+    errors: number;
+    warnings: number;
+  };
 }
 
 export interface Dossier {

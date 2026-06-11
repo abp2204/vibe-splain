@@ -67,6 +67,12 @@ function App() {
       <main className="main-content">
         {map && (
           <section className="overview">
+            {map.validation && !map.validation.passed && (
+              <div className="validation-warning">
+                ⚠️ SCAN QUALITY WARNING: {map.validation.errors} errors and {map.validation.warnings} warnings found. 
+                Automation may be blocked. Check <code>validation_report.json</code> for details.
+              </div>
+            )}
             {map.stack.length > 0 && (
               <div className="stack-row">
                 {map.stack.map(s => <span key={s} className="stack-chip">{s}</span>)}

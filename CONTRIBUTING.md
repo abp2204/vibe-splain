@@ -45,7 +45,7 @@ The UI must work from `file://` URLs. Never change the Vite base path to `/` or 
 
 ### Atomic writes
 
-All dossier persistence must go through `writeDossier()` which uses `async-mutex` and the tmp+rename pattern.
+All dossier persistence must go through `ExportOrchestrator` (in the CLI package) which coordinates multiple artifacts and uses `ArtifactBundleWriter` for atomic tmp+rename commits. Raw analysis facts are written via `writeAnalysis()` in the brain.
 
 ## Submitting Changes
 

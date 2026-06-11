@@ -19,6 +19,7 @@ export interface PipelineScanResult {
   wildCandidates: FileAnalysis[];
   uiUrl: string;
   graph: import('../graph.js').ImportGraph;
+  store: import('../analysis.js').AnalysisStore;
   validation: {
     passed: boolean;
     errors: number;
@@ -42,10 +43,6 @@ export async function runPipeline(projectRoot: string): Promise<PipelineScanResu
 
   // Stage 10-13: scoring (canonical severity, delta targets, validation report)
   const scoring = await runScoring(projectRoot, cr, binding);
-
-  // Write graph.json and analysis.json
-  await writeGraph(projectRoot, res.graph);
-  await writeAnalysis(projectRoot, scoring.store);
 
   // Build FileAnalysis array for backward compat with ScanResult
   const files: FileAnalysis[] = cr.classified
@@ -99,6 +96,7 @@ export async function runPipeline(projectRoot: string): Promise<PipelineScanResu
     wildCandidates,
     uiUrl,
     graph: res.graph,
+    store: scoring.store,
     validation: {
       passed: scoring.validationReport.passed,
       errors: scoring.validationReport.summary.errorCount,

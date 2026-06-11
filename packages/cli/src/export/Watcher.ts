@@ -2,9 +2,19 @@ import chokidar from 'chokidar';
 import { createHash } from 'crypto';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
-import { readDossier, writeDossier } from './dossier.js';
+import { readDossier } from '@vibe-splain/brain';
+import { ExportOrchestrator } from './ExportOrchestrator.js';
 
-export function startWatcher(projectRoot: string, watchedPaths: string[]): void {
+const activeWatchers = new Map<string, chokidar.FSWatcher>();
+
+export async function startWatcher(projectRoot: string, watchedPaths: string[]): Promise<void> {
+  // Clean up existing watcher for this project to prevent resource leaks
+  const existing = activeWatchers.get(projectRoot);
+  if (existing) {
+    await existing.close();
+    activeWatchers.delete(projectRoot);
+  }
+
   const watcher = chokidar.watch(watchedPaths.length > 0 ? watchedPaths : projectRoot, {
     ignoreInitial: true,
     ignored: ['**/node_modules/**', '**/dist/**', '**/build/**', '**/.vibe-splainer/**'],
@@ -15,12 +25,13 @@ export function startWatcher(projectRoot: string, watchedPaths: string[]): void 
     try {
       const dossier = await readDossier(projectRoot);
       if (!dossier) return;
+      
       const content = await readFile(filepath, 'utf8');
       const newHash = createHash('sha256').update(content).digest('hex');
       let mutated = false;
+      
       for (const pillar of dossier.pillars) {
         for (const card of pillar.decisions) {
-          // Match on primaryFile (relative), compare against the per-primaryFile hash stored at write time.
           if (!card.primaryFile) continue;
           const absMatch = filepath === join(projectRoot, card.primaryFile) || filepath.endsWith('/' + card.primaryFile);
           if (absMatch && card.lastScannedHash !== newHash) {
@@ -31,11 +42,17 @@ export function startWatcher(projectRoot: string, watchedPaths: string[]): void 
           }
         }
       }
-      if (mutated) await writeDossier(projectRoot, dossier);
+      
+      if (mutated) {
+        const orchestrator = new ExportOrchestrator(projectRoot);
+        await orchestrator.writeBundle(dossier);
+        console.error(`[vibe-splain] File changed: ${filepath}. Dossier artifacts updated.`);
+      }
     } catch (err) {
       console.error('[vibe-splain] Watcher error:', err);
     }
   });
 
+  activeWatchers.set(projectRoot, watcher);
   console.error('[vibe-splain] File watcher started');
 }

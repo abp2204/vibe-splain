@@ -1,5 +1,7 @@
-import { scanProject, writeDossier, readDossier, startWatcher } from '@vibe-splain/brain';
+import { scanProject, readDossier } from '@vibe-splain/brain';
 import type { Dossier } from '@vibe-splain/brain';
+import { ExportOrchestrator } from '../../export/ExportOrchestrator.js';
+import { startWatcher } from '../../export/Watcher.js';
 
 export const scanProjectTool = {
   name: 'scan_project',
@@ -16,7 +18,7 @@ export const scanProjectTool = {
   },
 };
 
-export async function handleScanProject(args: Record<string, unknown>): Promise<unknown> {
+export async function handleScanProject(args: Record<string, unknown>, options: any = {}): Promise<unknown> {
   const projectRoot = args.projectRoot as string;
   if (!projectRoot) throw new Error('projectRoot is required');
 
@@ -31,7 +33,15 @@ export async function handleScanProject(args: Record<string, unknown>): Promise<
     version: '2.0.0',
     scannedAt: new Date().toISOString(),
     projectRoot,
-    map: { ...result.map, brief },
+    map: { 
+      ...result.map, 
+      brief,
+      validation: result.validation ? {
+        passed: result.validation.passed,
+        errors: result.validation.errors,
+        warnings: result.validation.warnings,
+      } : undefined
+    },
     pillars: existing?.pillars ?? [],
     wildDiscoveries: existing?.wildDiscoveries ?? [],
     stalePaths: existing?.stalePaths ?? [],
@@ -44,17 +54,31 @@ export async function handleScanProject(args: Record<string, unknown>): Promise<
     }
   }
 
-  await writeDossier(projectRoot, dossier);
+  const scanId = `scan_${Date.now()}`;
+  const orchestrator = new ExportOrchestrator(projectRoot);
+  const { manifestPointer } = await orchestrator.writeBundle(dossier, {
+    format: options.format,
+    budget: options.budget ? parseInt(options.budget, 10) : undefined,
+    scope: options.scope,
+  }, result.store, result.graph, scanId);
 
   // Watch the real-source files for staleness.
-  startWatcher(projectRoot, result.files.map(f => f.path));
+  await startWatcher(projectRoot, result.files.map(f => f.path));
 
   console.error(`[vibe-splain] Scan complete. ${result.totalFilesScanned} files, ${result.realSourceCount} real-source, ${result.wildCandidates.length} wild candidates.`);
 
   const validation = result.validation ?? { passed: true, errors: 0, warnings: 0, reportPath: '.vibe-splainer/validation_report.json' };
 
+  let statusMsg = 'Scan complete.';
+  if (!validation.passed) {
+    statusMsg = `SCAN QUALITY WARNING: ${validation.errors} errors and ${validation.warnings} warnings found in validation report. Delta Engine automation may be blocked.`;
+  }
+
   return {
     ok: true,
+    message: statusMsg,
+    scanId,
+    manifestPointer,
     validation: {
       passed: validation.passed,
       errors: validation.errors,

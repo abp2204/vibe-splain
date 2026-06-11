@@ -1,6 +1,6 @@
 # ADR-013 — Function-Level Action Binding as the Core Grounding Layer
 
-**Status:** Accepted — Pending Implementation  
+**Status:** Accepted — Implemented
 **Date:** 2026-06-11  
 **Deciders:** Aayush Patel
 

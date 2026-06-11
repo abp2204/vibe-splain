@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.0] - 2026-06-11
+
+### Added
+- **Multi-tenant Storage Architecture** — `PointerStore` (SQLite/WAL) and `BlobStore` (content-addressed) for efficient scan history and artifact management
+- **Token-Aware Hydration** — `BudgetGuard` middleware with 8000 char auto-pointer truncation and content-addressed skeleton caching
+- **Delegated Work Orders** — Support for Manager-Worker orchestration with `create_work_order`, `spawn_worker`, and `submit_receipt`
+- **Strict Scope Enforcement** — `SessionScope` validation across all MCP tools including `read_file`, `get_file_skeleton`, and `get_evidence_slice`
+- **Atomic Patch Application** — `apply_patch` tool with stale-preimage guards and pre/post hash recording
+- **Artifact Lifecycle Management** — `gc` command for reference-counted artifact cleanup and `bundle`/`import` for portable scan sharing
+- **Function-level action mapping** — Behavioral call-chain analysis for deep traceability of side effects
+
+### Fixed
+- Scope bypass vulnerability in `get_evidence_slice` where raw file content could be extracted via hydrated pointers
+- Race condition/dual-worker vulnerability in `spawn_worker` that allowed re-spawning active work orders
+- Internal version string synchronization across package.json and CLI entrypoints
+
 ## [2.5.0] - 2026-06-11
 
 ### Added

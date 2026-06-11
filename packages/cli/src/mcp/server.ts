@@ -17,6 +17,16 @@ import { handleInspectPillar, inspectPillarTool } from './tools/inspect_pillar.j
 import { handleGetWildDiscoveries, getWildDiscoveriesTool } from './tools/get_wild_discoveries.js';
 import { handleMarkStale, markStaleTool } from './tools/mark_stale.js';
 import { handleGetCallChain, getCallChainTool } from './tools/get_call_chain.js';
+import { handleGetFileSkeleton, getFileSkeletonTool } from './tools/get_file_skeleton.js';
+import { handleReadFile, readFileTool } from './tools/read_file.js';
+import { handleApplyPatch, applyPatchTool } from './tools/apply_patch.js';
+import { handleCreateWorkOrder, createWorkOrderTool, handleSpawnWorker, spawnWorkerTool } from './tools/work_orders.js';
+import { handleSubmitReceipt, submitReceiptTool } from './tools/submit_receipt.js';
+import { handleSetSessionScope, setSessionScopeTool } from './tools/set_session_scope.js';
+import { handleYieldForScopeExpansion, yieldForScopeExpansionTool } from './tools/yield_for_scope_expansion.js';
+import { handleGetStartHere, getStartHereTool } from './tools/hydration/get_start_here.js';
+import { handleGetProjectSummary, getProjectSummaryTool } from './tools/hydration/get_project_summary.js';
+import { handleGetEvidenceSlice, getEvidenceSliceTool } from './tools/hydration/get_evidence_slice.js';
 
 // ⚠️ CRITICAL: Never use console.log() anywhere in this codebase.
 // stdout is owned by the MCP SDK for protocol messages.
@@ -33,9 +43,23 @@ const ALL_TOOLS = [
   inspectPillarTool,
   getWildDiscoveriesTool,
   markStaleTool,
+  // Phase 2: Skeletons + Hydration
+  getFileSkeletonTool,
+  readFileTool,
+  getStartHereTool,
+  getProjectSummaryTool,
+  getEvidenceSliceTool,
+  // Phase 3: Delegation & Proof
+  createWorkOrderTool,
+  spawnWorkerTool,
+  applyPatchTool,
+  submitReceiptTool,
+  // Phase 4: Scope & Escalation
+  setSessionScopeTool,
+  yieldForScopeExpansionTool,
 ];
 
-const TOOL_HANDLERS: Record<string, (args: Record<string, unknown>) => Promise<unknown>> = {
+const TOOL_HANDLERS: Record<string, (args: Record<string, unknown>, options?: any) => Promise<unknown>> = {
   scan_project: handleScanProject,
   get_project_map: handleGetProjectMap,
   set_project_brief: handleSetProjectBrief,
@@ -46,15 +70,29 @@ const TOOL_HANDLERS: Record<string, (args: Record<string, unknown>) => Promise<u
   inspect_pillar: handleInspectPillar,
   get_wild_discoveries: handleGetWildDiscoveries,
   mark_stale: handleMarkStale,
+  // Phase 2
+  get_file_skeleton: handleGetFileSkeleton,
+  read_file: handleReadFile,
+  get_start_here: handleGetStartHere,
+  get_project_summary: handleGetProjectSummary,
+  get_evidence_slice: handleGetEvidenceSlice,
+  // Phase 3
+  create_work_order: handleCreateWorkOrder,
+  spawn_worker: handleSpawnWorker,
+  apply_patch: handleApplyPatch,
+  submit_receipt: handleSubmitReceipt,
+  // Phase 4
+  set_session_scope: handleSetSessionScope,
+  yield_for_scope_expansion: handleYieldForScopeExpansion,
 };
 
-export async function startMCPServer(): Promise<void> {
+export async function startMCPServer(options: any = {}): Promise<void> {
   // Initialize Tree-Sitter WASM once at startup
   await initParser();
   console.error('[vibe-splain] Tree-Sitter parser initialized');
 
   const server = new Server(
-    { name: 'vibe-splain', version: '2.0.0' },
+    { name: 'vibe-splain', version: '3.0.0' },
     { capabilities: { tools: {}, prompts: {} } }
   );
 
@@ -162,7 +200,7 @@ When done, share the exact file:// UI link returned by scan_project. Never inven
     }
 
     try {
-      const result = await handler((args || {}) as Record<string, unknown>);
+      const result = await handler(args as Record<string, unknown>, options);
       return {
         content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
       };

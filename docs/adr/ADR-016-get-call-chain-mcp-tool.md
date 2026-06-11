@@ -1,6 +1,6 @@
 # ADR-016 — get_call_chain MCP Tool: Interface and Traversal Ownership
 
-**Status:** Accepted — Pending Implementation  
+**Status:** Accepted — Implemented
 **Date:** 2026-06-11  
 **Deciders:** Aayush Patel
 

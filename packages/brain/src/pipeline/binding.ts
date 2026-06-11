@@ -134,6 +134,7 @@ export interface GetCallChainArgs {
 
 export interface ChainStep {
   functionId: string;
+  callerFunctionId: string | null;
   displayName: string;
   filePath: string;
   startLine: number;
@@ -145,6 +146,11 @@ export interface ChainStep {
   evidenceText: string;
   isTarget?: boolean;
   depth: number;
+  callsite?: {
+    file: string;
+    line: number;
+    text: string;
+  };
 }
 
 export interface UnresolvedEdge {
@@ -299,9 +305,15 @@ export async function runActionBinding(
       const startLine = node.startPosition.row + 1;
       const startCol = node.startPosition.column;
       const endLine = node.endPosition.row + 1;
+      const endCol = node.endPosition.column;
 
-      // Deduplication safeguard
-      const isDuplicate = functions.some(f => f.startLine === startLine && f.endLine === endLine);
+      // Deduplication safeguard: include columns and node type to avoid skipping dense functions
+      const isDuplicate = functions.some(f => 
+        f.startLine === startLine && 
+        f.startCol === startCol && 
+        f.endLine === endLine &&
+        f.functionKind === node.type
+      );
       if (isDuplicate) continue;
 
       functionsExtracted++;
@@ -561,17 +573,36 @@ export async function runActionBinding(
     }
   }
 
-  // Second pass for named_import_match function ID resolution
+  // Second pass for cross-file resolution (named imports and namespace properties)
   for (const fileRec of Object.values(artifact.files)) {
     for (const fnRec of fileRec.functions) {
       for (const callRec of fnRec.calls) {
-        if (callRec.resolutionKind === 'named_import_match' && callRec.resolvedFilePath) {
-          const targetFile = artifact.files[callRec.resolvedFilePath];
-          if (targetFile) {
-            const targetFn = targetFile.functions.find(f => f.displayName === callRec.calleeRoot);
-            if (targetFn) {
-              callRec.resolvedTargetFunctionId = targetFn.functionId;
-            }
+        if (callRec.resolvedTargetFunctionId) continue;
+        if (!callRec.resolvedFilePath) continue;
+
+        const targetFile = artifact.files[callRec.resolvedFilePath];
+        if (!targetFile) continue;
+
+        if (callRec.resolutionKind === 'named_import_match') {
+          // Find by exported name (localName at import site matches displayName at source)
+          const targetFn = targetFile.functions.find(f => f.displayName === callRec.calleeRoot && f.isExported);
+          if (targetFn) {
+            callRec.resolvedTargetFunctionId = targetFn.functionId;
+            callRec.confidence = 'high';
+          }
+        } else if (callRec.resolutionKind === 'namespace_import_property' && callRec.calleeProperty) {
+          // For namespace.method(), calleeRoot is 'namespace', calleeProperty is 'method'
+          const targetFn = targetFile.functions.find(f => f.displayName === callRec.calleeProperty && f.isExported);
+          if (targetFn) {
+            callRec.resolvedTargetFunctionId = targetFn.functionId;
+            callRec.confidence = 'high';
+          }
+        } else if (callRec.resolutionKind === 'namespace_import_property' && !callRec.calleeProperty) {
+          // Namespace itself called? Unusual but handle if default export exists
+          const defaultFn = targetFile.functions.find(f => f.displayName === 'default');
+          if (defaultFn) {
+            callRec.resolvedTargetFunctionId = defaultFn.functionId;
+            callRec.confidence = 'high';
           }
         }
       }
@@ -627,16 +658,18 @@ export async function traverseCallChain(
 
   const chain: ChainStep[] = [];
   const unresolvedEdges: UnresolvedEdge[] = [];
-  const visited = new Set<string>();
-  const queue: { functionId: string, depth: number }[] = seedFunctionIds.map(id => ({ functionId: id, depth: 0 }));
+  const visited = new Set<string>(); // Tracks (callerId -> calleeId) to allow multi-path discovery
+  const queue: { functionId: string, callerFunctionId: string | null, depth: number, callsite?: ChainStep['callsite'] }[] = 
+    seedFunctionIds.map(id => ({ functionId: id, callerFunctionId: null, depth: 0 }));
 
   let targetReached = false;
   let truncatedAtDepth = false;
 
   while (queue.length > 0) {
-    const { functionId, depth } = queue.shift()!;
-    if (visited.has(functionId)) continue;
-    visited.add(functionId);
+    const { functionId, callerFunctionId, depth, callsite } = queue.shift()!;
+    const visitKey = `${callerFunctionId}->${functionId}`;
+    if (visited.has(visitKey)) continue;
+    visited.add(visitKey);
 
     const indexEntry = artifact.functionIndex[functionId];
     if (!indexEntry) continue;
@@ -647,62 +680,42 @@ export async function traverseCallChain(
     const fnRec = fileRec.functions.find(f => f.functionId === functionId);
     if (!fnRec) continue;
 
-    for (const call of fnRec.calls) {
-      if (call.resolutionKind === 'semantic_action_only') continue;
+    // Add this function to the chain
+    let isTarget = false;
+    if (targetFunctionName && fnRec.displayName === targetFunctionName) isTarget = true;
+    if (isTarget) targetReached = true;
 
-      if (call.resolvedTargetFunctionId) {
-        if (depth < maxDepth) {
-          queue.push({ functionId: call.resolvedTargetFunctionId, depth: depth + 1 });
-          
-          let isTarget = false;
-          if (targetFunctionName && call.calleeRoot === targetFunctionName) isTarget = true;
-          if (isTarget) targetReached = true;
+    chain.push({
+      functionId,
+      callerFunctionId,
+      displayName: fnRec.displayName,
+      filePath: fnRec.filePath,
+      startLine: fnRec.startLine,
+      edgeKind: 'call_edge',
+      confidence: 'high',
+      evidenceText: fnRec.evidenceText,
+      isTarget,
+      depth,
+      callsite
+    });
 
-          chain.push({
-            functionId: call.resolvedTargetFunctionId,
-            displayName: call.calleeRoot,
-            filePath: call.resolvedFilePath || 'unknown',
-            startLine: call.sourceLine,
-            edgeKind: 'call_edge',
-            confidence: call.confidence,
-            evidenceText: call.evidenceText,
-            isTarget,
-            depth
-          });
-        } else {
-          unresolvedEdges.push({
-            fromFunctionId: functionId,
-            calleeText: call.calleeText,
-            sourceLine: call.sourceLine,
-            reason: 'depth limit reached'
-          });
-          truncatedAtDepth = true;
-        }
-      } else {
-        unresolvedEdges.push({
-          fromFunctionId: functionId,
-          calleeText: call.calleeText,
-          sourceLine: call.sourceLine,
-          reason: call.resolutionKind
-        });
-      }
-    }
-
+    // Check semantic actions in this function
     for (const action of fnRec.semanticActions) {
-      let isTarget = false;
+      let isActionTarget = false;
       if (targetActionKind && action.actionKind === targetActionKind) {
-        isTarget = true;
-        if (targetModel && action.targetModel !== targetModel) isTarget = false;
-        if (targetOperation && action.targetOperation !== targetOperation) isTarget = false;
+        isActionTarget = true;
+        if (targetModel && action.targetModel !== targetModel) isActionTarget = false;
+        if (targetOperation && action.targetOperation !== targetOperation) isActionTarget = false;
       } else if (targetModel && action.targetModel === targetModel) {
-        isTarget = true;
-        if (targetOperation && action.targetOperation !== targetOperation) isTarget = false;
+        isActionTarget = true;
+        if (targetOperation && action.targetOperation !== targetOperation) isActionTarget = false;
       }
       
-      if (isTarget) targetReached = true;
+      if (isActionTarget) targetReached = true;
 
       chain.push({
-        functionId: action.sourceFunctionId,
+        functionId: action.actionId,
+        callerFunctionId: functionId,
         displayName: action.calleeText,
         filePath: fileRec.filePath,
         startLine: action.sourceLine,
@@ -712,9 +725,36 @@ export async function traverseCallChain(
         targetOperation: action.targetOperation || undefined,
         confidence: action.confidence,
         evidenceText: action.evidenceText,
-        isTarget,
-        depth
+        isTarget: isActionTarget,
+        depth: depth + 1
       });
+    }
+
+    // Expand calls
+    if (depth < maxDepth) {
+      for (const call of fnRec.calls) {
+        if (call.resolvedTargetFunctionId) {
+          queue.push({ 
+            functionId: call.resolvedTargetFunctionId, 
+            callerFunctionId: functionId,
+            depth: depth + 1,
+            callsite: {
+              file: fileRec.filePath,
+              line: call.sourceLine,
+              text: call.calleeText
+            }
+          });
+        } else {
+          unresolvedEdges.push({
+            fromFunctionId: functionId,
+            calleeText: call.calleeText,
+            sourceLine: call.sourceLine,
+            reason: call.resolutionKind
+          });
+        }
+      }
+    } else if (fnRec.calls.length > 0) {
+      truncatedAtDepth = true;
     }
   }
 

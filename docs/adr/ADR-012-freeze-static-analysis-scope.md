@@ -1,6 +1,6 @@
 # ADR-012 — Freeze Static Analysis Scope at VIBE SPLAIN v0.4
 
-**Status:** Proposed
+**Status:** Accepted — Implemented
 **Date:** 2026-06-11
 **Deciders:** Aayush Patel
 

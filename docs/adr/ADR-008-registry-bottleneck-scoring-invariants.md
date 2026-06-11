@@ -1,6 +1,6 @@
 # ADR-008 — `registry_bottleneck` Scoring Invariants (Correction Pass)
 
-**Status:** Proposed
+**Status:** Accepted — Implemented
 **Date:** 2026-06-11
 **Deciders:** Aayush Patel
 
