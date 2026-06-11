@@ -277,12 +277,26 @@ export interface ScoringResult {
 
 // ── Main stage implementation ─────────────────────────────────────────────────
 
+import type { ActionBindingResult } from './binding.js';
+
 export async function runScoring(
   projectRoot: string,
   cr: ClassificationResult,
+  binding?: ActionBindingResult
 ): Promise<ScoringResult> {
   const dir = join(projectRoot, '.vibe-splainer');
   await mkdir(dir, { recursive: true });
+
+  // Load binding artifact if not provided
+  let bindingArtifact = binding?.artifact;
+  if (!bindingArtifact) {
+    try {
+      const raw = await readFile(join(projectRoot, '.vibe-splainer', 'action_bindings.json'), 'utf8');
+      bindingArtifact = JSON.parse(raw);
+    } catch {
+      // Optional — continue without criticalFunctions
+    }
+  }
 
   // Stage 9: build PersistedFile store + canonical severity
   const persisted: Record<string, PersistedFile> = {};
@@ -372,6 +386,100 @@ export async function runScoring(
         isTruncated: span.rawExcerpt.length > 2000,
       }));
 
+      let criticalFunctions: any[] | undefined = undefined;
+      if (bindingArtifact) {
+        const fileBinding = bindingArtifact.files[pf.relativePath];
+        if (fileBinding) {
+          const scoredFunctions = fileBinding.functions.map(fn => {
+            let fnScore = 0;
+            const reasons: string[] = [];
+            
+            if (fn.semanticActions.length > 0) {
+              fnScore += 3;
+              reasons.push('Contains semantic actions');
+            }
+            if (fn.isEntrypoint) {
+              fnScore += 2;
+              reasons.push('Is a framework entrypoint');
+            }
+            
+            const resolvedOutbound = fn.calls.filter(c => c.resolvedTargetFunctionId).length;
+            if (resolvedOutbound > 0) {
+              const callPts = Math.min(3, resolvedOutbound);
+              fnScore += callPts;
+              reasons.push(`Has ${resolvedOutbound} resolved outbound calls`);
+            } else if (fn.calls.length > 0) {
+              fnScore += 1;
+              reasons.push(`Has ${fn.calls.length} outbound calls`);
+            }
+            
+            const writesModel = fn.semanticActions.some(a => a.actionKind === 'database_write' && a.targetModel);
+            if (writesModel) {
+              fnScore += 2;
+              reasons.push('Writes to a database model');
+            }
+            
+            const authOrValid = fn.semanticActions.some(a => a.actionKind === 'auth_check' || a.actionKind === 'validation');
+            if (authOrValid) {
+              fnScore += 1;
+              reasons.push('Performs auth/validation');
+            }
+
+            // Evidence overlap check
+            const hasEvidenceOverlap = rawEvidence.some(e => 
+              (fn.startLine <= e.endLine && fn.endLine >= e.startLine)
+            );
+            if (hasEvidenceOverlap) {
+              fnScore += 2;
+              reasons.push('Overlaps with raw evidence span');
+            }
+            
+            return { fn, fnScore, reasons };
+          });
+          
+          scoredFunctions.sort((a, b) => b.fnScore - a.fnScore);
+          // Only keep functions with at least one reason (not hollow)
+          const topFns = scoredFunctions.filter(x => x.reasons.length > 0).slice(0, 5);
+          
+          if (topFns.length > 0) {
+            criticalFunctions = topFns.map(({ fn, reasons }) => {
+              const evidence = fn.semanticActions.slice(0, 5).sort((a, b) => a.sourceLine - b.sourceLine).map(a => ({
+                sourceLine: a.sourceLine,
+                text: a.evidenceText,
+                actionKind: a.actionKind,
+                targetModel: a.targetModel,
+                targetOperation: a.targetOperation,
+                confidence: a.confidence
+              }));
+              
+              const confidences = fn.semanticActions.map(a => a.confidence);
+              let confidence: 'high'|'medium'|'low' = 'high';
+              if (confidences.includes('low')) confidence = 'low';
+              else if (confidences.includes('medium')) confidence = 'medium';
+              
+              return {
+                functionId: fn.functionId,
+                displayName: fn.displayName,
+                functionKind: fn.functionKind,
+                startLine: fn.startLine,
+                endLine: fn.endLine,
+                isEntrypoint: fn.isEntrypoint,
+                isExported: fn.isExported,
+                actionKinds: [...new Set(fn.semanticActions.map(a => a.actionKind))],
+                targetModels: [...new Set(fn.semanticActions.map(a => a.targetModel).filter(Boolean))] as string[],
+                targetOperations: [...new Set(fn.semanticActions.map(a => a.targetOperation).filter(Boolean))] as string[],
+                outboundCallCount: fn.calls.length,
+                resolvedOutboundCallCount: fn.calls.filter(c => c.resolvedTargetFunctionId).length,
+                semanticActionCount: fn.semanticActions.length,
+                evidence,
+                confidence,
+                reasons
+              };
+            });
+          }
+        }
+      }
+
       return {
         path: pf.relativePath,
         frameworkRole: pf.frameworkRole,
@@ -396,6 +504,7 @@ export async function runScoring(
         testProbes: inferTestProbes(pf.writeIntents, observableOutputs),
         rawEvidence,
         displayEvidence,
+        criticalFunctions,
         analysisAnnotation: `${pf.frameworkRole} in ${pf.productDomain} domain. fanIn=${pf.gravitySignals.fanIn} cyclomatic=${pf.gravitySignals.cyclomatic} loc=${pf.gravitySignals.loc}`,
         hashes: { fileHash, evidenceHash: rawEvidence.map(e => e.evidenceHash).join('-') },
       };

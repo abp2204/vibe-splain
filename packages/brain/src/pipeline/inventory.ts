@@ -378,6 +378,147 @@ export function extractImports(source: string, lang: Language): string[] {
   return specs;
 }
 
+export interface RawNamedImport {
+  localName: string;
+  importedName: string;
+  moduleSpecifier: string;
+  importKind: 'named' | 'default' | 'namespace' | 'side_effect';
+  isTypeOnly: boolean;
+  sourceLine: number;
+  rawText: string;
+}
+
+export function extractNamedImports(
+  source: string,
+  lang: Language,
+  tree: Parser.Tree,
+): RawNamedImport[] {
+  const imports: RawNamedImport[] = [];
+  if (lang !== 'typescript' && lang !== 'tsx' && lang !== 'javascript') {
+    return imports;
+  }
+
+  const walk = (node: Parser.SyntaxNode) => {
+    if (node.type === 'import_statement') {
+      const moduleSpecifierNode = node.childForFieldName('source');
+      if (!moduleSpecifierNode) return;
+      const moduleSpecifier = moduleSpecifierNode.text.replace(/['"]/g, '');
+
+      const importKeyword = node.children.find(c => c.type === 'import');
+      let isGlobalTypeOnly = false;
+      if (importKeyword) {
+        const nextNode = importKeyword.nextSibling;
+        if (nextNode && nextNode.type === 'type') {
+          isGlobalTypeOnly = true;
+        }
+      }
+
+      const importClause = node.children.find(c => c.type === 'import_clause');
+      if (!importClause) {
+        imports.push({
+          localName: '',
+          importedName: '',
+          moduleSpecifier,
+          importKind: 'side_effect',
+          isTypeOnly: isGlobalTypeOnly,
+          sourceLine: node.startPosition.row + 1,
+          rawText: firstLine(node.text)
+        });
+        return;
+      }
+
+      const defaultIdentifier = importClause.children.find(c => c.type === 'identifier');
+      if (defaultIdentifier) {
+        imports.push({
+          localName: defaultIdentifier.text,
+          importedName: 'default',
+          moduleSpecifier,
+          importKind: 'default',
+          isTypeOnly: isGlobalTypeOnly,
+          sourceLine: node.startPosition.row + 1,
+          rawText: firstLine(node.text)
+        });
+      }
+
+      const namespaceImport = importClause.children.find(c => c.type === 'namespace_import');
+      if (namespaceImport) {
+        const identifier = namespaceImport.children.find(c => c.type === 'identifier');
+        if (identifier) {
+          imports.push({
+            localName: identifier.text,
+            importedName: '*',
+            moduleSpecifier,
+            importKind: 'namespace',
+            isTypeOnly: isGlobalTypeOnly,
+            sourceLine: node.startPosition.row + 1,
+            rawText: firstLine(node.text)
+          });
+        }
+      }
+
+      const namedImports = importClause.children.find(c => c.type === 'named_imports');
+      if (namedImports) {
+        for (const specifier of namedImports.children.filter(c => c.type === 'import_specifier')) {
+          const isTypeKeyword = specifier.children.some(c => c.type === 'type');
+          const isSpecifierTypeOnly = isGlobalTypeOnly || isTypeKeyword;
+
+          const nameNode = specifier.childForFieldName('name');
+          const aliasNode = specifier.childForFieldName('alias');
+
+          if (nameNode) {
+            imports.push({
+              localName: aliasNode ? aliasNode.text : nameNode.text,
+              importedName: nameNode.text,
+              moduleSpecifier,
+              importKind: 'named',
+              isTypeOnly: isSpecifierTypeOnly,
+              sourceLine: node.startPosition.row + 1,
+              rawText: firstLine(node.text)
+            });
+          }
+        }
+      }
+    } else if (node.type === 'variable_declarator') {
+      const init = node.childForFieldName('value');
+      if (init && init.type === 'call_expression') {
+        const fnNameNode = init.childForFieldName('function');
+        if (fnNameNode && fnNameNode.text === 'require') {
+          const args = init.childForFieldName('arguments');
+          if (args && args.namedChildCount > 0) {
+            const specNode = args.namedChildren[0];
+            if (specNode.type === 'string') {
+              const specifier = specNode.text.replace(/['"]/g, '');
+              const idNode = node.childForFieldName('name');
+              if (idNode) {
+                if (idNode.type === 'identifier') {
+                  imports.push({
+                    localName: idNode.text,
+                    importedName: 'default',
+                    moduleSpecifier: specifier,
+                    importKind: 'default',
+                    isTypeOnly: false,
+                    sourceLine: node.startPosition.row + 1,
+                    rawText: firstLine(node.text)
+                  });
+                } else if (idNode.type === 'object_pattern') {
+                  // TODO: handle require destructuring
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    for (const child of node.children) {
+      walk(child);
+    }
+  };
+
+  walk(tree.rootNode);
+  return imports;
+}
+
 // ── Stack / entrypoint detection ─────────────────────────────────────────────
 
 export async function detectStackAndEntrypoints(
@@ -781,7 +922,9 @@ export interface WorkItem {
   lang: Language;
   source: string;
   ast: AstAnalysis;
+  tree?: Parser.Tree;
   importSpecs: string[];
+  rawNamedImports: RawNamedImport[];
   pathDemote: string | null;
   frameworkRole: FrameworkRole;
   productDomain: ProductDomain;
@@ -835,6 +978,7 @@ export async function runInventory(projectRoot: string): Promise<InventoryResult
 
     const ast = analyzeAst(source, lang, tree);
     const importSpecs = extractImports(source, lang);
+    const rawNamedImports = extractNamedImports(source, lang, tree);
 
     // Stage 2: framework role
     const frameworkRole = inferFrameworkRole(rel);
@@ -842,7 +986,7 @@ export async function runInventory(projectRoot: string): Promise<InventoryResult
     const productDomain = inferProductDomain(rel, importSpecs);
 
     work.push({
-      abs: file, rel, lang, source, ast, importSpecs,
+      abs: file, rel, lang, source, ast, tree, importSpecs, rawNamedImports,
       pathDemote: pathDemoteReason(rel),
       frameworkRole, productDomain,
     });

@@ -1,5 +1,5 @@
 export { initParser, scanProject, getFileAnalysis, inferFrameworkRole, inferProductDomain, inferSideEffectProfile, type ScanResult, type FileEvidence } from './scanner.js';
-export { readAnalysis, writeAnalysis, writeDeltaTargets, computeLoadBearingScore, computeSeverity, type AnalysisStore, type PersistedFile, type DeltaTarget, type HotSpan, type RawEvidence, type DisplayEvidence, type ObservableOutput, type WriteIntent, type PatchRisk, type TestProbe } from './analysis.js';
+export { readAnalysis, writeAnalysis, writeDeltaTargets, computeLoadBearingScore, computeSeverity, type AnalysisStore, type PersistedFile, type DeltaTarget, type HotSpan, type RawEvidence, type DisplayEvidence, type ObservableOutput, type WriteIntent, type PatchRisk, type TestProbe, type FunctionActionSummary } from './analysis.js';
 export {
   readDossier, writeDossier, regenerateUI, validateMermaidNodeCount,
   type Dossier, type Pillar, type DecisionCard, type Evidence,
@@ -13,3 +13,13 @@ export {
 } from './signals.js';
 export { readGraph, writeGraph, type ImportGraph } from './graph.js';
 export { startWatcher } from './watcher.js';
+export type {
+  ActionBindingsArtifact,
+  FileBindingRecord,
+  FunctionRecord,
+  CallRecord,
+  SemanticActionRecord,
+  ImportBinding,
+  ActionBindingResult,
+} from './pipeline/binding.js';
+export { traverseCallChain } from './pipeline/binding.js';

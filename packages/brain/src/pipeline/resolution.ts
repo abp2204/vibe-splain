@@ -246,7 +246,7 @@ function resolveGeneric(
   return null;
 }
 
-function resolveImportWithAliasMap(
+export function resolveImportWithAliasMap(
   spec: string,
   fromAbs: string,
   lang: Language,

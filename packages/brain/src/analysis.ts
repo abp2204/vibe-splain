@@ -125,6 +125,34 @@ export interface DisplayEvidence {
   isTruncated: boolean;  // true when rawExcerpt.length > 2000
 }
 
+export interface FunctionActionSummary {
+  functionId: string;
+  displayName: string;
+  functionKind: string;
+  startLine: number;
+  endLine: number;
+  isEntrypoint: boolean;
+  isExported: boolean;
+  actionKinds: string[];
+  targetModels: string[];
+  targetOperations: string[];
+  outboundCallCount: number;
+  resolvedOutboundCallCount: number;
+  semanticActionCount: number;
+  evidence: FunctionEvidenceItem[];
+  confidence: 'high' | 'medium' | 'low';
+  reasons: string[];
+}
+
+export interface FunctionEvidenceItem {
+  sourceLine: number;
+  text: string;
+  actionKind: string;
+  targetModel: string | null;
+  targetOperation: string | null;
+  confidence: 'high' | 'medium' | 'low';
+}
+
 export interface DeltaTarget {
   path: string;
   frameworkRole: FrameworkRole;
@@ -154,6 +182,7 @@ export interface DeltaTarget {
   testProbes: TestProbe[];
   rawEvidence: RawEvidence[];
   displayEvidence: DisplayEvidence[];
+  criticalFunctions?: FunctionActionSummary[];
   analysisAnnotation: string;
   hashes: {
     fileHash: string;

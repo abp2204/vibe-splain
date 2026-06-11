@@ -16,6 +16,7 @@ import { handleGetStrategicOverview, getStrategicOverviewTool } from './tools/ge
 import { handleInspectPillar, inspectPillarTool } from './tools/inspect_pillar.js';
 import { handleGetWildDiscoveries, getWildDiscoveriesTool } from './tools/get_wild_discoveries.js';
 import { handleMarkStale, markStaleTool } from './tools/mark_stale.js';
+import { handleGetCallChain, getCallChainTool } from './tools/get_call_chain.js';
 
 // ⚠️ CRITICAL: Never use console.log() anywhere in this codebase.
 // stdout is owned by the MCP SDK for protocol messages.
@@ -26,6 +27,7 @@ const ALL_TOOLS = [
   getProjectMapTool,
   setProjectBriefTool,
   getFileContextTool,
+  getCallChainTool,
   writeDecisionCardTool,
   getStrategicOverviewTool,
   inspectPillarTool,
@@ -38,6 +40,7 @@ const TOOL_HANDLERS: Record<string, (args: Record<string, unknown>) => Promise<u
   get_project_map: handleGetProjectMap,
   set_project_brief: handleSetProjectBrief,
   get_file_context: handleGetFileContext,
+  get_call_chain: handleGetCallChain,
   write_decision_card: handleWriteDecisionCard,
   get_strategic_overview: handleGetStrategicOverview,
   inspect_pillar: handleInspectPillar,

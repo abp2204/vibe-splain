@@ -6,6 +6,7 @@ import type { FileAnalysis } from '../signals.js';
 import { runInventory } from './inventory.js';
 import { runResolution } from './resolution.js';
 import { runClassification } from './classification.js';
+import { runActionBinding } from './binding.js';
 import { runScoring } from './scoring.js';
 import type { ValidationReport } from './scoring.js';
 
@@ -33,11 +34,14 @@ export async function runPipeline(projectRoot: string): Promise<PipelineScanResu
   // Stage 4: alias resolution + graph construction
   const res = await runResolution(projectRoot, inv);
 
-  // Stage 5-8: classification (side effects, write intents, risk types, load bearing)
+  // Stage 5: action bindings (function-level call edges and semantics)
+  const binding = await runActionBinding(projectRoot, inv, res);
+
+  // Stage 6-9: classification (side effects, write intents, risk types, load bearing)
   const cr = await runClassification(projectRoot, inv, res);
 
-  // Stage 9-12: scoring (canonical severity, delta targets, validation report)
-  const scoring = await runScoring(projectRoot, cr);
+  // Stage 10-13: scoring (canonical severity, delta targets, validation report)
+  const scoring = await runScoring(projectRoot, cr, binding);
 
   // Write graph.json and analysis.json
   await writeGraph(projectRoot, res.graph);
