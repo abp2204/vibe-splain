@@ -91,9 +91,9 @@ export async function regenerateUI(projectRoot: string, dossier: Dossier): Promi
   // Read the template index.html
   let html = await readFile(join(templateDir, 'index.html'), 'utf8');
   
-  // Inject dossier data as inline script BEFORE closing </head>
+  // Inject dossier data as inline script at the injection point
   const injection = `<script>window.__VIBE_DOSSIER__ = ${JSON.stringify(dossier)};</script>`;
-  html = html.replace('</head>', `${injection}\n</head>`);
+  html = html.replace('<!-- VIBE_DOSSIER_INJECTION_POINT -->', injection);
   
   // Write the data-baked index.html to the project's ui dir
   await writeFile(join(uiDir, 'index.html'), html, 'utf8');
