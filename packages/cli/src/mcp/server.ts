@@ -3,6 +3,8 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
+  ListPromptsRequestSchema,
+  GetPromptRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { initParser } from '@vibe-splain/brain';
 import { handleScanProject, scanProjectTool } from './tools/scan_project.js';
@@ -44,8 +46,36 @@ export async function startMCPServer(): Promise<void> {
 
   const server = new Server(
     { name: 'vibe-splain', version: '1.0.0' },
-    { capabilities: { tools: {} } }
+    { capabilities: { tools: {}, prompts: {} } }
   );
+
+  // Register prompts
+  server.setRequestHandler(ListPromptsRequestSchema, async () => ({
+    prompts: [
+      {
+        name: 'build_dossier',
+        description: 'Build a full architectural dossier using vibe-splain (replaces the need to copy-paste the README prompt)',
+      }
+    ]
+  }));
+
+  server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+    if (request.params.name !== 'build_dossier') {
+      throw new Error(`Unknown prompt: ${request.params.name}`);
+    }
+    return {
+      description: 'Build a full architectural dossier',
+      messages: [
+        {
+          role: 'user',
+          content: {
+            type: 'text',
+            text: 'Use the vibe-splain MCP tools to build a full architectural dossier for this project. Call scan_project first. Then for each high-gravity file, call get_file_context to read the source, synthesize a 3-5 sentence narrative explaining WHY the code exists, and call write_decision_card to persist it. Include Mermaid diagrams where they help explain data flow. When you\'re done, share the exact file:// UI link returned by the tool so I can view the dossier in my browser. Do NOT invent a localhost URL.',
+          }
+        }
+      ]
+    };
+  });
 
   // Register tool listing
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
