@@ -26,11 +26,11 @@ Your coding agent does all the thinking — VIBE-SPLAIN just gives it the right 
 npx vibe-splain install
 ```
 
-That's it. This patches your coding agent's MCP config so it can call VIBE-SPLAIN's tools. Restart your agent, then ask it:
+That's it. This patches your coding agent's MCP config so it can call VIBE-SPLAIN's tools. Restart your agent, then paste this prompt:
 
-> _"Scan this project and explain its architecture."_
+> _"Use the vibe-splain MCP tools to build a full architectural dossier for this project. Call scan_project first. Then for each high-gravity file, call get_file_context to read the source, synthesize a 3-5 sentence narrative explaining WHY the code exists, and call write_decision_card to persist it. Include Mermaid diagrams where they help explain data flow. When you're done, share the exact file:// UI link returned by the tool so I can view the dossier in my browser. Do NOT invent a localhost URL."_
 
-Your agent will call `scan_project`, read the high-gravity files, and build a Dossier — a structured set of **Decision Cards** explaining _why_ the code exists.
+Your agent will loop through the high-gravity files, analyze each one, and build a Dossier — a structured set of **Decision Cards** explaining _why_ the code exists.
 
 ### Supported Agents
 
