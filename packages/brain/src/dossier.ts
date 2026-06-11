@@ -71,9 +71,14 @@ export async function regenerateUI(projectRoot: string, dossier: Dossier): Promi
   const uiDir = join(projectRoot, '.vibe-splainer', 'ui');
   await mkdir(uiDir, { recursive: true });
 
-  // Template index.html lives in CLI's dist/ui (built from packages/ui)
-  // When running from brain package, we go: brain/dist -> cli/dist/ui
-  const templateDir = join(__dirname, '../../cli/dist/ui');
+  // The template index.html lives in the CLI package's dist/ui folder.
+  // If running from unbundled brain/dist: __dirname is brain/dist -> we need ../../cli/dist/ui
+  // If running from bundled CLI (esbuild): __dirname is cli/dist -> we need ./ui
+  let templateDir = join(__dirname, 'ui'); // Bundled path
+  
+  if (!existsSync(templateDir)) {
+    templateDir = join(__dirname, '../../cli/dist/ui'); // Unbundled path
+  }
   
   if (!existsSync(templateDir)) {
     console.error('[vibe-splain] UI template not found at', templateDir, '- skipping UI regeneration');
