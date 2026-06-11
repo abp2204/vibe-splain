@@ -158,7 +158,7 @@ packages/
 ### Setup
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/vibe-splain.git
+git clone https://github.com/abp2204/vibe-splain.git
 cd vibe-splain
 npm install
 ```

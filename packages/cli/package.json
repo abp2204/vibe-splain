@@ -4,15 +4,15 @@
   "description": "Architectural dossier engine for vibe-coded projects. Runs as an MCP server inside your coding agent.",
   "type": "module",
   "license": "MIT",
-  "author": "Aayush Patel",
-  "homepage": "https://github.com/aayushpatel/vibe-splain#readme",
+  "author": "abp2204",
+  "homepage": "https://github.com/abp2204/vibe-splain#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/aayushpatel/vibe-splain.git",
+    "url": "git+https://github.com/abp2204/vibe-splain.git",
     "directory": "packages/cli"
   },
   "bugs": {
-    "url": "https://github.com/aayushpatel/vibe-splain/issues"
+    "url": "https://github.com/abp2204/vibe-splain/issues"
   },
   "keywords": [
     "mcp",
