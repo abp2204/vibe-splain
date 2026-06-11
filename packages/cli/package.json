@@ -1,7 +1,7 @@
 {
   "name": "vibe-splain",
   "version": "2.7.1",
-  "description": "Architectural dossier engine for vibe-coded TypeScript/JavaScript projects. Runs as an MCP server inside your coding agent.",
+  "description": "Architectural mapping and behavioral call-chain engine. Built on a language-agnostic foundation with specialized optimization for TypeScript/JavaScript projects.",
   "type": "module",
   "license": "MIT",
   "author": "abp2204",

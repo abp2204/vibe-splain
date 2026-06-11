@@ -1,7 +1,7 @@
 <p align="center">
   <strong>◈ VIBE-SPLAIN</strong>
   <br />
-  <em>Understand any vibe-coded TypeScript/JavaScript project in minutes, not days.</em>
+  <em>Map architectural DNA and behavioral call-chains in complex codebases.</em>
 </p>
 
 <p align="center">
@@ -14,7 +14,9 @@
 
 ---
 
-VIBE-SPLAIN is an **MCP server** that runs inside your coding agent (Claude Code, Gemini CLI, Cursor, Windsurf). It performs surgical static analysis of a codebase using [Tree-Sitter](https://tree-sitter.github.io/tree-sitter/). While it can run on many languages, it is specifically tailored and best-suited for **TypeScript and JavaScript** projects. It identifies the high-gravity files that hold architectural decisions, and exposes them as MCP tools for your agent to synthesize into an **Architectural Dossier**.
+VIBE-SPLAIN is a high-fidelity **static analysis engine** and MCP server. It uses [Tree-Sitter](https://tree-sitter.github.io/tree-sitter/) to extract the structural and behavioral patterns of a codebase—identifying high-gravity components, mapping semantic actions, and tracing call-chains between entrypoints and side effects.
+
+While VIBE-SPLAIN is built on a language-agnostic foundation, the current toolset is **highly optimized for TypeScript and JavaScript** (especially Next.js, Prisma, and tRPC environments).
 
 **Zero LLM calls. Zero API keys. Pure static analysis.**
 
@@ -38,7 +40,7 @@ Type `/prompt build_dossier` and press enter.
 **In Cursor / Windsurf:**
 Open the MCP panel or agent chat, select the `build_dossier` prompt from the VIBE-SPLAIN server, and run it.
 
-Your agent will loop through the high-gravity files, analyze each one, and build a Dossier — a structured set of **Decision Cards** explaining _why_ the code exists.
+Your agent will loop through the high-gravity files, analyze each one, and build an **Architectural Dossier** — a structured set of **Decision Cards** explaining the technical rationale of the code.
 
 ### Supported Agents
 
@@ -70,11 +72,11 @@ Your agent will loop through the high-gravity files, analyze each one, and build
 
 ### Three Levels of Analysis
 
-1. **Level 0 — Pillar Detection**: Regex-matches import strings against known library patterns (e.g., `passport` → Auth, `stripe` → Payments, `prisma` → Database) to auto-categorize files.
+1. **Level 0 — Semantic Classification**: Maps files to architectural "pillars" (Auth, Payments, Database, etc.) using import-path heuristics and library signatures.
 
-2. **Level 1 — Cognitive Weight**: Tree-Sitter AST analysis computes a complexity score per file based on link density, nesting depth, and mutation counts. Files scoring ≥ 15 are **High-Gravity**.
+2. **Level 1 — Cognitive Complexity**: Tree-Sitter AST analysis computes a complexity score per file based on link density, nesting depth, and mutation counts. Files scoring ≥ 15 are identified as **High-Gravity**.
 
-3. **Level 2 — Behavioral Traceability**: Tree-Sitter powered call-graph analysis. It maps function-level dependencies and identifies **Critical Functions** (entrypoints, semantic actions, or high-outbound callers) so your agent can trace the exact ripple effect of a change.
+3. **Level 2 — Behavioral Traceability**: Tree-Sitter powered call-graph analysis. It maps function-level dependencies and identifies **Critical Functions** (entrypoints, semantic actions, or high-outbound callers) so your agent can trace the exact ripple effect of a code change.
 
 ## MCP Tools
 
@@ -108,7 +110,7 @@ VIBE-SPLAIN exposes **8 tools** over MCP stdio:
 Unlike simple regex scanners, VIBE-SPLAIN runs a deterministic **13-stage pipeline**—from AST inventory and alias resolution to semantic classification and function-level scoring—to ensure every Decision Card is grounded in actual code paths.
 
 ### Semantic Rulesets
-Built on a pluggable architecture, VIBE-SPLAIN uses specialized rulesets to understand framework-specific semantics like:
+VIBE-SPLAIN uses specialized rulesets to understand framework-specific semantics. Current optimizations include:
 - **Next.js**: Server Actions, `cookies()`, `headers()`, and App Router conventions.
 - **Database**: Prisma model mutations and raw query patterns.
 - **API**: tRPC procedure calls (`mutate`/`query`) and standard `fetch`/`axios` patterns.
