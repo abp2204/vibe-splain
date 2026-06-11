@@ -14,58 +14,68 @@ function escapeHtml(str: string): string {
     .replace(/"/g, '&quot;');
 }
 
+// Agents sometimes store escaped newlines/tabs as literal "\n"/"\t" text,
+// collapsing a multi-line snippet into one physical line. Restore them so the
+// code renders as real lines (and so it wraps instead of scrolling forever).
+function normalizeSnippet(s: string): string {
+  let out = s.replace(/\r\n/g, '\n');
+  if (/\\[nt]/.test(out)) {
+    out = out
+      .replace(/\\r\\n/g, '\n')
+      .replace(/\\n/g, '\n')
+      .replace(/\\t/g, '  ');
+  }
+  // strip trailing whitespace per line + leading/trailing blank lines
+  return out.split('\n').map(l => l.replace(/\s+$/, '')).join('\n').replace(/^\n+|\n+$/g, '');
+}
+
+function langFor(file: string): string {
+  if (file.endsWith('.tsx')) return 'tsx';
+  if (file.endsWith('.jsx')) return 'jsx';
+  if (file.endsWith('.ts')) return 'typescript';
+  if (file.endsWith('.py')) return 'python';
+  if (file.endsWith('.go')) return 'go';
+  if (file.endsWith('.rs')) return 'rust';
+  if (file.endsWith('.java')) return 'java';
+  return 'javascript';
+}
+
 export function EvidenceSidebar({ evidence, onClose }: EvidenceSidebarProps) {
   const [highlightedHtml, setHighlightedHtml] = useState<Map<string, string>>(new Map());
   const highlighterRef = useRef<any>(null);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    // Dynamically import shiki
+    let alive = true;
     import('shiki').then(async ({ createHighlighter }) => {
       const highlighter = await createHighlighter({
         themes: ['tokyo-night'],
         langs: ['typescript', 'javascript', 'tsx', 'jsx', 'python', 'go', 'rust', 'java'],
       });
+      if (!alive) return;
       highlighterRef.current = highlighter;
-    }).catch(err => {
-      console.error('Failed to load Shiki:', err);
-    });
+      setReady(true);
+    }).catch(err => console.error('Failed to load Shiki:', err));
+    return () => { alive = false; };
   }, []);
 
   useEffect(() => {
-    if (!evidence || !highlighterRef.current) return;
-
-    const newHtml = new Map<string, string>();
+    if (!evidence || !ready || !highlighterRef.current) return;
+    const map = new Map<string, string>();
     for (const e of evidence) {
-      const lang = e.file.endsWith('.tsx') ? 'tsx'
-        : e.file.endsWith('.jsx') ? 'jsx'
-        : e.file.endsWith('.ts') ? 'typescript'
-        : e.file.endsWith('.py') ? 'python'
-        : e.file.endsWith('.go') ? 'go'
-        : e.file.endsWith('.rs') ? 'rust'
-        : e.file.endsWith('.java') ? 'java'
-        : 'javascript';
-
+      const key = `${e.file}:${e.startLine}-${e.endLine}`;
+      const code = normalizeSnippet(e.snippet);
       try {
-        let html = highlighterRef.current.codeToHtml(e.snippet, {
-          lang,
+        map.set(key, highlighterRef.current.codeToHtml(code, {
+          lang: langFor(e.file),
           theme: 'tokyo-night',
-        });
-        // Post-process: wrap lines in the evidence range with highlight class
-        const lines = html.split('\n');
-        const highlighted = lines.map((line: string, i: number) => {
-          const lineNum = e.startLine + i;
-          if (lineNum >= e.startLine && lineNum <= e.endLine) {
-            return `<span class="evidence-highlight">${line}</span>`;
-          }
-          return line;
-        });
-        newHtml.set(`${e.file}:${e.startLine}-${e.endLine}`, highlighted.join('\n'));
+        }));
       } catch {
-        newHtml.set(`${e.file}:${e.startLine}-${e.endLine}`, `<pre><code>${escapeHtml(e.snippet)}</code></pre>`);
+        map.set(key, `<pre><code>${escapeHtml(code)}</code></pre>`);
       }
     }
-    setHighlightedHtml(newHtml);
-  }, [evidence]);
+    setHighlightedHtml(map);
+  }, [evidence, ready]);
 
   if (!evidence) {
     return (
@@ -91,15 +101,13 @@ export function EvidenceSidebar({ evidence, onClose }: EvidenceSidebarProps) {
         const pathParts = e.file.split('/');
         const fileName = pathParts.pop() || '';
         const dirs = pathParts;
+        const fallback = normalizeSnippet(e.snippet);
 
         return (
           <div key={i} className="evidence-item">
             <div className="evidence-breadcrumb">
               {dirs.map((d, j) => (
-                <span key={j}>
-                  {d}
-                  <span className="separator"> / </span>
-                </span>
+                <span key={j}>{d}<span className="separator"> / </span></span>
               ))}
               <span className="filename">{fileName}</span>
               <span className="lines">[Lines {e.startLine}–{e.endLine}]</span>
@@ -108,7 +116,7 @@ export function EvidenceSidebar({ evidence, onClose }: EvidenceSidebarProps) {
               {highlightedHtml.has(key) ? (
                 <div dangerouslySetInnerHTML={{ __html: highlightedHtml.get(key)! }} />
               ) : (
-                <pre><code>{e.snippet}</code></pre>
+                <pre><code>{fallback}</code></pre>
               )}
             </div>
           </div>

@@ -7,6 +7,16 @@ import { join } from 'path';
 
 const CATEGORIES: CardCategory[] = ['Bottleneck', 'Hack', 'Smart-Move', 'Risk', 'Convention', 'Dead-Weight'];
 
+// Agents frequently emit snippets with literal "\n"/"\t" instead of real
+// newlines, which collapses the code into one line in the UI. Restore them.
+function normalizeSnippet(s: string): string {
+  let out = (s ?? '').replace(/\r\n/g, '\n');
+  if (/\\[nt]/.test(out)) {
+    out = out.replace(/\\r\\n/g, '\n').replace(/\\n/g, '\n').replace(/\\t/g, '  ');
+  }
+  return out.split('\n').map(l => l.replace(/\s+$/, '')).join('\n').replace(/^\n+|\n+$/g, '');
+}
+
 export const writeDecisionCardTool = {
   name: 'write_decision_card',
   description: 'Persists ONE Decision Card about ONE file. This is a hostile architecture review, not documentation. The thesis must be a VERDICT, not a description. The pillar MUST be one of the names from get_project_map (free-form is rejected). One card per file (duplicates rejected). Evidence must come from get_file_context hotSpans/smellSpans — never the header comment, never the whole file.',
@@ -56,10 +66,11 @@ export async function handleWriteDecisionCard(args: Record<string, unknown>): Pr
   const tradeoff = (args.tradeoff as string) || null;
   const blastRadius = (args.blastRadius as string) || null;
   const confidence = (args.confidence as 'low' | 'medium' | 'high') || 'medium';
-  const evidence = args.evidence as Evidence[];
+  const rawEvidence = args.evidence as Evidence[];
+  const evidence: Evidence[] = (rawEvidence || []).map(e => ({ ...e, snippet: normalizeSnippet(e.snippet) }));
   const diagram = (args.diagram as string) || null;
 
-  if (!projectRoot || !pillar || !primaryFile || !title || !thesis || !category || !narrative || !evidence) {
+  if (!projectRoot || !pillar || !primaryFile || !title || !thesis || !category || !narrative || !rawEvidence || rawEvidence.length === 0) {
     throw new Error('projectRoot, pillar, primaryFile, title, thesis, category, narrative, and evidence are required');
   }
   if (!CATEGORIES.includes(category)) {
