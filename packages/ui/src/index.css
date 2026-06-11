@@ -58,7 +58,7 @@ body::before {
 .app-layout {
   display: grid;
   grid-template-columns: 1fr 380px;
-  grid-template-rows: auto auto 1fr;
+  grid-template-rows: auto 1fr;
   height: 100vh;
   overflow: hidden;
   position: relative;
@@ -396,6 +396,194 @@ body::before {
   border-left: 2px solid var(--accent-amber);
   display: block;
 }
+
+/* ============ SECTION LABELS ============ */
+.section-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin: 24px 0 12px;
+}
+.section-label.hero-label { color: var(--accent-amber); }
+
+/* ============ OVERVIEW / BRIEF ============ */
+.overview { margin-bottom: 8px; }
+.stack-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.stack-chip {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent-teal);
+  background: var(--accent-teal-dim);
+  border: 1px solid rgba(0, 229, 204, 0.25);
+  border-radius: var(--radius-sm);
+  padding: 3px 10px;
+}
+.overview-stat {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+.project-brief {
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.7;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-left: 2px solid var(--accent-teal);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+}
+
+/* ============ GRAVITY × HEAT MAP ============ */
+.heatmap {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 12px;
+  box-shadow: var(--shadow-card);
+}
+.heatmap-svg { width: 100%; height: auto; display: block; }
+.hm-axis { stroke: var(--text-muted); stroke-width: 1; opacity: 0.5; }
+.hm-axis-label { fill: var(--text-muted); font-size: 11px; font-family: var(--font-ui); }
+.hm-quadrant { fill: var(--accent-amber); font-size: 11px; font-weight: 600; opacity: 0.8; font-family: var(--font-ui); }
+.hm-dot { cursor: pointer; transition: fill-opacity 0.15s, r 0.15s; }
+.hm-dot:hover { fill-opacity: 1; }
+.hm-empty {
+  background: var(--bg-surface);
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* ============ START HERE RAIL ============ */
+.start-here { margin-bottom: 8px; }
+.sh-list { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.sh-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.sh-item.has-card { cursor: pointer; }
+.sh-item.has-card:hover { border-color: var(--border-active); background: var(--bg-hover); }
+.sh-rank {
+  color: var(--accent-teal);
+  font-weight: 600;
+  width: 18px;
+  text-align: center;
+}
+.sh-path { color: var(--text-primary); }
+.sh-tag {
+  margin-left: auto;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+.sh-tag.documented { color: var(--accent-teal); }
+
+/* ============ WILD HERO ============ */
+.wild-hero {
+  border: 1px solid rgba(255, 77, 94, 0.25);
+  background: rgba(255, 77, 94, 0.03);
+  border-radius: var(--radius-lg);
+  padding: 4px 16px 16px;
+  margin-bottom: 8px;
+}
+
+/* ============ CARD v2 ============ */
+.card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.card-chips { display: flex; align-items: center; gap: 10px; }
+.cat-chip {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border: 1px solid;
+  border-radius: var(--radius-sm);
+  padding: 2px 9px;
+}
+.sev-pips { display: inline-flex; gap: 3px; align-items: center; }
+.sev-pips .pip {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  opacity: 0.3;
+}
+.sev-pips .pip.on { background: var(--cat-color, var(--accent-amber)); opacity: 1; }
+.decision-card::before {
+  background: linear-gradient(90deg, var(--cat-color, var(--accent-teal)), transparent);
+}
+.card-thesis {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--text-primary);
+  margin: 2px 0 6px;
+}
+.card-subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  margin-bottom: 8px;
+}
+.card-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 14px 0;
+}
+.card-row {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 12px;
+  font-size: 13px;
+}
+.row-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  padding-top: 2px;
+}
+.row-value { color: var(--text-secondary); line-height: 1.6; }
+.card-file {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.card-metrics {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent-amber);
+  margin-left: auto;
+}
+@keyframes card-flash {
+  0% { box-shadow: 0 0 0 2px var(--cat-color, var(--accent-teal)); }
+  100% { box-shadow: var(--shadow-card); }
+}
+.decision-card.flash { animation: card-flash 1.4s ease-out; }
 
 /* ============ EMPTY STATE ============ */
 .empty-state {

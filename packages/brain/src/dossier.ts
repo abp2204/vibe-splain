@@ -14,13 +14,25 @@ export interface Evidence {
   snippet: string;
 }
 
+export type CardCategory =
+  | 'Bottleneck' | 'Hack' | 'Smart-Move' | 'Risk' | 'Convention' | 'Dead-Weight';
+
 export interface DecisionCard {
   id: string;
   pillar: string;
   title: string;
+  thesis: string;                 // one-sentence verdict, the headline
+  category: CardCategory;
+  severity: 1 | 2 | 3 | 4 | 5;
   narrative: string;
+  tradeoff: string | null;        // what was given up / why not the obvious way
+  blastRadius: string | null;     // "what breaks if this changes"
+  confidence: 'low' | 'medium' | 'high';
   evidence: Evidence[];
   diagram: string | null;
+  gravity?: number;               // carried from scan for UI plotting
+  heat?: number;
+  primaryFile?: string;           // the one file this card is about (dedupe key)
   status: 'fresh' | 'stale';
   lastScannedHash: string;
 }
@@ -31,10 +43,28 @@ export interface Pillar {
   decisions: DecisionCard[];
 }
 
+export interface PillarDef {
+  name: string;
+  description: string;
+  memberFiles: string[];
+}
+
+export interface ProjectMap {
+  stack: string[];          // ["Python 3.13", "PySide6", "pygame"]
+  entrypoints: string[];
+  pillars: PillarDef[];     // the ONLY legal pillar names
+  fileCount: number;
+  realSourceCount: number;
+  topGravity: string[];     // "Start Here" — ranked relative paths
+  topHeat: string[];        // Wild Discovery candidates
+  brief: string | null;     // agent fills in Phase 4 global pass
+}
+
 export interface Dossier {
   version: string;
   scannedAt: string;
   projectRoot: string;
+  map: ProjectMap;
   pillars: Pillar[];
   wildDiscoveries: DecisionCard[];
   stalePaths: string[];

@@ -23,7 +23,7 @@ export function EvidenceSidebar({ evidence, onClose }: EvidenceSidebarProps) {
     import('shiki').then(async ({ createHighlighter }) => {
       const highlighter = await createHighlighter({
         themes: ['tokyo-night'],
-        langs: ['typescript', 'javascript', 'tsx', 'jsx'],
+        langs: ['typescript', 'javascript', 'tsx', 'jsx', 'python', 'go', 'rust', 'java'],
       });
       highlighterRef.current = highlighter;
     }).catch(err => {
@@ -39,6 +39,10 @@ export function EvidenceSidebar({ evidence, onClose }: EvidenceSidebarProps) {
       const lang = e.file.endsWith('.tsx') ? 'tsx'
         : e.file.endsWith('.jsx') ? 'jsx'
         : e.file.endsWith('.ts') ? 'typescript'
+        : e.file.endsWith('.py') ? 'python'
+        : e.file.endsWith('.go') ? 'go'
+        : e.file.endsWith('.rs') ? 'rust'
+        : e.file.endsWith('.java') ? 'java'
         : 'javascript';
 
       try {

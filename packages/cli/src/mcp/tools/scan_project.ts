@@ -3,7 +3,7 @@ import type { Dossier } from '@vibe-splain/brain';
 
 export const scanProjectTool = {
   name: 'scan_project',
-  description: 'Scans a codebase and returns its structural analysis. CALL THIS FIRST before any other tool. Returns High-Gravity files grouped by pillar, plus wildCandidates for unusual high-complexity files. After calling this tool, call get_file_context for each file in highGravityFiles, synthesize a narrative explaining WHY that code exists, then call write_decision_card to persist it. The uiUrl in the response is a file:// link — share it with the user so they can open the Dossier UI in their browser.',
+  description: 'Scans a codebase (TS/JS/Python/Go/Rust/Java) and returns a structural analysis. CALL THIS FIRST, then call get_project_map. Files are scored on two axes: GRAVITY (importance — fan-in + PageRank centrality) and HEAT (smell/tech-debt). Mockups, vendored code, and orphan files are demoted (isRealSource:false) so cards target the real application. After scanning, call get_project_map to get the fixed pillar set, Start-Here (top gravity) and Wild-Discovery (top heat) lists. The uiUrl is a file:// link — share it with the user.',
   inputSchema: {
     type: 'object' as const,
     properties: {
@@ -23,53 +23,49 @@ export async function handleScanProject(args: Record<string, unknown>): Promise<
   console.error(`[vibe-splain] Scanning project: ${projectRoot}`);
   const result = await scanProject(projectRoot);
 
-  // Create initial dossier structure
-  const existingDossier = await readDossier(projectRoot);
-  const dossier: Dossier = existingDossier || {
-    version: '1.0.0',
+  // Preserve any existing cards; replace the structural map every scan.
+  const existing = await readDossier(projectRoot);
+  const brief = existing?.map?.brief ?? null;
+
+  const dossier: Dossier = {
+    version: '2.0.0',
     scannedAt: new Date().toISOString(),
     projectRoot,
-    pillars: [],
-    wildDiscoveries: [],
-    stalePaths: [],
+    map: { ...result.map, brief },
+    pillars: existing?.pillars ?? [],
+    wildDiscoveries: existing?.wildDiscoveries ?? [],
+    stalePaths: existing?.stalePaths ?? [],
   };
 
-  // Update scan timestamp
-  dossier.scannedAt = new Date().toISOString();
-
-  // Create pillar entries from scan results
-  for (const group of result.pillarGroups) {
-    const existingPillar = dossier.pillars.find(p => p.name === group.name);
-    if (!existingPillar) {
-      dossier.pillars.push({ name: group.name, cardCount: 0, decisions: [] });
+  // Seed empty pillar buckets from the fixed graph-derived pillar set.
+  for (const def of result.map.pillars) {
+    if (!dossier.pillars.find(p => p.name === def.name)) {
+      dossier.pillars.push({ name: def.name, cardCount: 0, decisions: [] });
     }
   }
 
   await writeDossier(projectRoot, dossier);
 
-  // Start file watcher on high-gravity files
-  const watchPaths = result.highGravityFiles.map(f => f.path);
-  startWatcher(projectRoot, watchPaths);
+  // Watch the real-source files for staleness.
+  startWatcher(projectRoot, result.files.map(f => f.path));
 
-  console.error(`[vibe-splain] Scan complete. ${result.totalFilesScanned} files scanned, ${result.highGravityFiles.length} high-gravity files found.`);
+  console.error(`[vibe-splain] Scan complete. ${result.totalFilesScanned} files, ${result.realSourceCount} real-source, ${result.wildCandidates.length} wild candidates.`);
 
   return {
     projectRoot: result.projectRoot,
     totalFilesScanned: result.totalFilesScanned,
-    highGravityFiles: result.highGravityFiles.map(f => ({
+    realSourceCount: result.realSourceCount,
+    stack: result.map.stack,
+    entrypoints: result.map.entrypoints,
+    pillars: result.map.pillars.map(p => ({ name: p.name, fileCount: p.memberFiles.length })),
+    startHere: result.map.topGravity,
+    wildDiscoveryCandidates: result.wildCandidates.map(f => ({
       relativePath: f.relativePath,
-      cognitiveWeight: f.cognitiveWeight,
-      pillars: f.pillars,
+      heat: Math.round(f.heat),
+      gravity: Math.round(f.gravity),
+      topSmells: f.smells.filter(s => s.severity >= 3).slice(0, 3).map(s => s.note),
     })),
-    pillarGroups: result.pillarGroups.map(g => ({
-      name: g.name,
-      fileCount: g.files.length,
-      files: g.files.map(f => f.relativePath),
-    })),
-    wildCandidates: result.wildCandidates.map(f => ({
-      relativePath: f.relativePath,
-      cognitiveWeight: f.cognitiveWeight,
-    })),
+    nextStep: 'Call get_project_map, write a project brief via set_project_brief, THEN write cards starting from the Start-Here files.',
     uiUrl: result.uiUrl,
   };
 }

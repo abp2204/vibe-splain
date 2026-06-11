@@ -32,13 +32,17 @@ export async function handleMarkStale(args: Record<string, unknown>): Promise<un
 
   let staleCount = 0;
   for (const filePath of filePaths) {
+    const matches = (card: { primaryFile?: string; evidence: { file: string }[] }) =>
+      card.primaryFile === filePath ||
+      filePath.endsWith(card.primaryFile || '\0') ||
+      card.evidence.some(e => e.file === filePath || filePath.endsWith(e.file));
     for (const pillar of dossier.pillars) {
       for (const card of pillar.decisions) {
-        if (card.evidence.some(e => e.file === filePath || filePath.endsWith(e.file))) {
-          card.status = 'stale';
-          staleCount++;
-        }
+        if (matches(card)) { card.status = 'stale'; staleCount++; }
       }
+    }
+    for (const card of dossier.wildDiscoveries) {
+      if (matches(card)) card.status = 'stale';
     }
     if (!dossier.stalePaths.includes(filePath)) {
       dossier.stalePaths.push(filePath);
