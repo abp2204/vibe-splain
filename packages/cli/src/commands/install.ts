@@ -21,8 +21,9 @@ function expandPath(p: string): string {
 }
 
 const AGENT_CONFIGS: AgentConfig[] = [
-  { name: 'Claude Code', path: '~/.claude/claude_desktop_config.json', format: 'claude' },
-  { name: 'Claude Code (Windows)', path: '%APPDATA%/Claude/claude_desktop_config.json', format: 'claude' },
+  { name: 'Claude Code CLI', path: '~/.claude/settings.json', format: 'claude' },
+  { name: 'Claude Desktop', path: '~/.claude/claude_desktop_config.json', format: 'claude' },
+  { name: 'Claude Desktop (Windows)', path: '%APPDATA%/Claude/claude_desktop_config.json', format: 'claude' },
   { name: 'Gemini CLI', path: '~/.gemini/settings.json', format: 'gemini' },
   { name: 'Cursor', path: '~/.cursor/mcp.json', format: 'cursor' },
   { name: 'Windsurf', path: '~/.codeium/windsurf/mcp_config.json', format: 'cursor' },

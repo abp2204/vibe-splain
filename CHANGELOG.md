@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.0] - 2026-06-11
+
+### Added
+- 12-stage deterministic scan pipeline (`packages/brain/src/pipeline/`) replacing monolithic `scanProject`
+- Stage 4 real alias resolution: reads `tsconfig.json` paths + `package.json` workspaces before graph construction; writes `stage-04-aliases.json`
+- `canonicalSeverity` and `canonicalLoadBearing` fields on `PersistedFile` — computed once in scoring stage, enforced by correction invariants
+- `validation_report.json` — new permanent output artifact with hard error + warning rules
+- `registry_consumer` RiskType — marks files that bridge the form component registry into rendering
+- `partial_wrong_surface` entrypoint trace status — fires when entrypoints are found but semantically wrong for the file's domain
+- `scan_project` MCP response now includes `ok`, `validation`, and `artifacts` fields
+- Stage artifacts written to `.vibe-splainer/`: `stage-01-inventory.json` through `stage-09-severity.json`
+- Expanded side effect detectors: `webhook_ingress` catches `verifySignature`; `payment_mutation` fires on webhook confirmation; `booking_mutation` catches tRPC useMutation in booking domain
+- Two-pass risk type inference: cross-file `registry_consumer` + `type_boundary_leak` via `riskTypesByFile` map
+- Lowered `registry_bottleneck` threshold to `fanIn > 3 || publicSurface > 5` (OR instead of AND)
+- Role-aware `state_machine` threshold: 8 for provider/store, 20 for everything else
+
+### Fixed
+- Five known Cal.com classification failures now correctly classified (stripe webhook, form registry bottleneck/consumer, data table context, useBookings hook)
+- `applyCorrections` invariants: `handle_payment_webhook` → forces `payment_mutation` + `webhook_ingress`; severity ≥ 4 for payment/booking mutation; severity 5 forces `canonicalLoadBearing`
+
+## [2.4.1] - 2026-06-11
+
+### Fixed
+- Internal version string synchronization across package.json and CLI entrypoint
+
 ## [2.1.1] - 2026-06-11
 
 ### Fixed

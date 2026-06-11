@@ -51,7 +51,23 @@ export async function handleScanProject(args: Record<string, unknown>): Promise<
 
   console.error(`[vibe-splain] Scan complete. ${result.totalFilesScanned} files, ${result.realSourceCount} real-source, ${result.wildCandidates.length} wild candidates.`);
 
+  const validation = result.validation ?? { passed: true, errors: 0, warnings: 0, reportPath: '.vibe-splainer/validation_report.json' };
+
   return {
+    ok: true,
+    validation: {
+      passed: validation.passed,
+      errors: validation.errors,
+      warnings: validation.warnings,
+      reportPath: validation.reportPath,
+    },
+    artifacts: {
+      analysis: '.vibe-splainer/analysis.json',
+      deltaTargets: '.vibe-splainer/delta_targets.json',
+      dossier: '.vibe-splainer/dossier.json',
+      graph: '.vibe-splainer/graph.json',
+      html: '.vibe-splainer/ui/index.html',
+    },
     projectRoot: result.projectRoot,
     totalFilesScanned: result.totalFilesScanned,
     realSourceCount: result.realSourceCount,

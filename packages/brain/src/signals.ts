@@ -1,5 +1,4 @@
-// v2 signal vocabulary — the typed vocabulary the scanner produces.
-// Pure data definitions; the scanner (Phase 1/2) populates these.
+// v3 signal vocabulary — extended for Delta Engine compatibility.
 
 export type Language = 'typescript' | 'tsx' | 'javascript' | 'python' | 'go' | 'rust' | 'java';
 
@@ -34,6 +33,96 @@ export interface SmellHit {
   note: string;        // human-readable, e.g. "catch block swallows error silently"
 }
 
+// ── Delta Engine classification vocabulary ───────────────────────────────────
+
+export type FrameworkRole =
+  | 'app_route_page'
+  | 'app_route_layout'
+  | 'app_route_handler'
+  | 'app_loading_boundary'
+  | 'app_error_boundary'
+  | 'pages_route'
+  | 'pages_api_route'
+  | 'trpc_api_route'
+  | 'component'
+  | 'hook'
+  | 'provider'
+  | 'store'
+  | 'utility'
+  | 'type_definition'
+  | 'test'
+  | 'generated'
+  | 'unknown';
+
+export type ProductDomain =
+  | 'booking_creation'
+  | 'booking_management'
+  | 'booking_audit'
+  | 'event_type_configuration'
+  | 'availability'
+  | 'auth'
+  | 'auth_oauth'
+  | 'payments'
+  | 'payments_webhooks'
+  | 'webhooks'
+  | 'apps_marketplace'
+  | 'calendar_integrations'
+  | 'video'
+  | 'onboarding'
+  | 'settings'
+  | 'admin'
+  | 'data_table'
+  | 'shell_navigation'
+  | 'forms'
+  | 'embed'
+  | 'notifications'
+  | 'routing_infrastructure'
+  | 'test_infrastructure'
+  | 'generated_noise'
+  | 'unknown';
+
+export type SideEffect =
+  | 'database_write'
+  | 'database_read'
+  | 'booking_mutation'
+  | 'payment_mutation'
+  | 'auth_token_mutation'
+  | 'webhook_delivery'
+  | 'webhook_ingress'
+  | 'email_send'
+  | 'calendar_mutation'
+  | 'redirect'
+  | 'analytics_event'
+  | 'cache_revalidation'
+  | 'local_storage'
+  | 'indexed_db'
+  | 'external_api_call'
+  | 'trpc_mutation'
+  | 'server_action'
+  | 'none_detected';
+
+export type RiskType =
+  | 'state_machine'
+  | 'god_component'
+  | 'god_hook'
+  | 'registry_bottleneck'
+  | 'registry_consumer'
+  | 'mutation_orchestration'
+  | 'route_handler_write_path'
+  | 'side_effect_coupling'
+  | 'type_boundary_leak'
+  | 'storage_persistence_risk'
+  | 'async_race_risk'
+  | 'error_swallowing'
+  | 'complexity_hotspot';
+
+export interface RuntimeEntrypoint {
+  path: string;
+  frameworkRole: FrameworkRole;
+  productDomain: ProductDomain;
+  distance: number;
+}
+
 export interface FileAnalysis {
   path: string;
   relativePath: string;
@@ -46,4 +135,8 @@ export interface FileAnalysis {
   heatSignals: HeatSignals;
   smells: SmellHit[];
   pillarHint: string | null;   // from import-graph community detection
+  // Delta Engine classification
+  frameworkRole: FrameworkRole;
+  productDomain: ProductDomain;
+  sideEffectProfile: SideEffect[];
 }

@@ -1,6 +1,6 @@
 {
   "name": "vibe-splain",
-  "version": "2.3.0",
+  "version": "2.6.0",
   "description": "Architectural dossier engine for vibe-coded TypeScript/JavaScript projects. Runs as an MCP server inside your coding agent.",
   "type": "module",
   "license": "MIT",
@@ -30,7 +30,7 @@
     "node": ">=18"
   },
   "bin": {
-    "vibe-splain": "./dist/index.js"
+    "vibe-splain": "dist/index.js"
   },
   "scripts": {
     "build": "tsc && node build.mjs"

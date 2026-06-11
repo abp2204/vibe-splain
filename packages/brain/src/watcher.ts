@@ -1,6 +1,7 @@
 import chokidar from 'chokidar';
 import { createHash } from 'crypto';
 import { readFile } from 'fs/promises';
+import { join } from 'path';
 import { readDossier, writeDossier } from './dossier.js';
 
 export function startWatcher(projectRoot: string, watchedPaths: string[]): void {
@@ -19,12 +20,14 @@ export function startWatcher(projectRoot: string, watchedPaths: string[]): void 
       let mutated = false;
       for (const pillar of dossier.pillars) {
         for (const card of pillar.decisions) {
-          if (card.evidence.some(e => e.file === filepath || filepath.endsWith(e.file))) {
-            if (card.lastScannedHash !== newHash) {
-              card.status = 'stale';
-              if (!dossier.stalePaths.includes(filepath)) dossier.stalePaths.push(filepath);
-              mutated = true;
-            }
+          // Match on primaryFile (relative), compare against the per-primaryFile hash stored at write time.
+          if (!card.primaryFile) continue;
+          const absMatch = filepath === join(projectRoot, card.primaryFile) || filepath.endsWith('/' + card.primaryFile);
+          if (absMatch && card.lastScannedHash !== newHash) {
+            card.status = 'stale';
+            const rel = card.primaryFile;
+            if (!dossier.stalePaths.includes(rel)) dossier.stalePaths.push(rel);
+            mutated = true;
           }
         }
       }

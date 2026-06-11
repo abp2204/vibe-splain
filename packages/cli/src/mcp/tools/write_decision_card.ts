@@ -109,16 +109,10 @@ export async function handleWriteDecisionCard(args: Record<string, unknown>): Pr
   const gravity = persisted ? Math.round(persisted.gravity) : undefined;
   const heat = persisted ? Math.round(persisted.heat) : undefined;
 
-  // Hash for staleness.
-  let combinedContent = '';
-  for (const e of evidence) {
-    try {
-      combinedContent += await readFile(join(projectRoot, e.file), 'utf8');
-    } catch {
-      combinedContent += e.snippet;
-    }
-  }
-  const hash = createHash('sha256').update(combinedContent).digest('hex');
+  // Hash the primaryFile so the watcher can detect staleness per-file.
+  let primaryContent = '';
+  try { primaryContent = await readFile(join(projectRoot, primaryFile), 'utf8'); } catch { /* */ }
+  const hash = createHash('sha256').update(primaryContent).digest('hex');
 
   const card: DecisionCard = {
     id: uuidv4(),

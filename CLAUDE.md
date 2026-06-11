@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+**Read `CONTEXT.md` first** — it explains what VIBE-SPLAIN is, who consumes it, and the Delta Engine interface contract.
+
 ## Working Mode
 
 **Continuous improvement protocol:** When encountering a repeating friction point, a new project standard, or a correction from the user — pause, propose a CLAUDE.md update (summarize the change briefly), wait for `approve`, then apply it immediately.
@@ -78,17 +80,32 @@ packages/
 |---------|------|
 | Tree-Sitter scanning + Cognitive Weight formula | `packages/brain/src/scanner.ts` |
 | Atomic dossier writes + `regenerateUI` | `packages/brain/src/dossier.ts` |
+| `delta_targets.json` write + `DeltaTarget` type | `packages/brain/src/analysis.ts` |
 | MCP tool registration | `packages/cli/src/mcp/server.ts` |
 | Agent config patcher (`install` command) | `packages/cli/src/commands/install.ts` |
 | UI data injection pattern | `window.__VIBE_DOSSIER__` in `packages/ui/src/App.tsx` |
 
-## Cognitive Weight Formula
+## Delta Engine Interface
+
+`delta_targets.json` (`.vibe-splainer/delta_targets.json`) is the machine-readable payload for Delta Engine. Written by `scan_project` alongside `analysis.json` — available immediately, no agent cards required. See `packages/brain/src/analysis.ts` for the `DeltaTarget` type and `LOAD_BEARING_FAN_IN_THRESHOLD`.
+
+`dossier.json` is human/agent-facing. Do not merge these two files or conflate their schemas.
+
+## Gravity Formula
 
 ```
-cognitiveWeight = (linkDensity × 2) + nestingDepth + (mutationCount × 1.5)
+gravityRaw = adjustedCentrality × 50
+           + log₂(fanIn + 1) × 6
+           + log₂(cyclomatic + 1) × 7
+           + log₂(publicSurface + 1) × 2
+           + (maxNesting ≥ 4 ? 5 : 0)
+
+adjustedCentrality = pageRankCentrality × (0.3 + 0.7 × depthFactor)
 ```
 
-Files ≥ 15 → High-Gravity. Files ≥ 25 → Wild Discoveries.
+Gravity is 0–100. Top 12 real-source files by gravity = `topGravity` (Start Here).
+
+Wild Discovery candidates: `heat ≥ 60` OR any `smell.severity ≥ 4`. Top 12 = `topHeat`.
 
 ## esbuild Bundling Note
 
