@@ -734,7 +734,6 @@ body::before {
 
 .term-tip {
   position: fixed;
-  transform: translate(-50%, calc(-100% - 10px));
   z-index: 1000;
   width: max-content;
   max-width: 280px;
@@ -748,30 +747,44 @@ body::before {
   box-shadow: var(--shadow-card);
   text-align: left;
   pointer-events: none;
+  /* reset inherited label styling so tooltips aren't UPPERCASE / tracked */
+  text-transform: none;
+  letter-spacing: normal;
   animation: term-tip-in 0.12s ease;
 }
 @keyframes term-tip-in {
-  from { opacity: 0; transform: translate(-50%, calc(-100% - 4px)); }
-  to   { opacity: 1; transform: translate(-50%, calc(-100% - 10px)); }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
-/* little arrow */
+/* little arrow — sits under the term via --arrow (set in JS) */
 .term-tip::after {
   content: '';
   position: absolute;
-  bottom: -5px;
-  left: 50%;
-  transform: translateX(-50%) rotate(45deg);
+  left: var(--arrow, 50%);
   width: 9px;
   height: 9px;
   background: var(--bg-elevated);
+  transform: translateX(-50%) rotate(45deg);
+}
+/* default: tooltip above the term → arrow on its bottom edge */
+.term-tip::after {
+  bottom: -5px;
   border-right: 1px solid var(--border-active);
   border-bottom: 1px solid var(--border-active);
+}
+/* flipped: tooltip below the term → arrow on its top edge */
+.term-tip.flip::after {
+  bottom: auto;
+  top: -5px;
+  border-right: none;
+  border-bottom: none;
+  border-left: 1px solid var(--border-active);
+  border-top: 1px solid var(--border-active);
 }
 .term-tip-head {
   font-family: var(--font-ui);
   font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.02em;
   color: var(--accent-teal);
 }
 .term-tip-body {
