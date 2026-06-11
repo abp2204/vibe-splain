@@ -136,5 +136,21 @@ export async function handleWriteDecisionCard(args: Record<string, unknown>): Pr
 
   console.error(`[vibe-splain] Card written: "${title}" [${category} sev${severity}] in "${pillar}"${isWild ? ' (Wild Discovery)' : ''}`);
 
-  return { success: true, cardId: card.id, pillar, primaryFile, category, severity, wildDiscovery: isWild, gravity, heat };
+  // Keep the loop going: compute what is still undocumented.
+  const documented = new Set(
+    [...dossier.pillars.flatMap(p => p.decisions), ...dossier.wildDiscoveries]
+      .map(c => c.primaryFile).filter(Boolean) as string[]
+  );
+  const remaining = [...new Set([...dossier.map.topGravity, ...dossier.map.topHeat])]
+    .filter(f => !documented.has(f));
+
+  return {
+    success: true, cardId: card.id, pillar, primaryFile, category, severity,
+    wildDiscovery: isWild, gravity, heat,
+    remainingFiles: remaining,
+    nextStep:
+      remaining.length === 0
+        ? 'Every Start-Here and Wild-Discovery file now has a card. Share the file:// UI link from scan_project. Done.'
+        : `Card saved. DO NOT STOP. ${remaining.length} files left. Next: call get_file_context then write_decision_card for "${remaining[0]}".`,
+  };
 }

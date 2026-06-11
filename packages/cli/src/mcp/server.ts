@@ -92,6 +92,12 @@ PROCESS — follow in order:
    smellSpans (located tech debt) — base your evidence on THOSE, never on header comments.
 4. Write one decision card per file via write_decision_card.
 
+This is an AUTONOMOUS loop. Every tool response includes a \`nextStep\` and often a
+\`remainingFiles\` list — OBEY them. Do NOT stop, summarize, or ask the user "how would
+you like to proceed" until every Start-Here and Wild-Discovery file has a card. Writing
+the brief is the START of the work, not the end. Keep calling get_file_context +
+write_decision_card until remainingFiles is empty.
+
 RULES FOR EVERY CARD — non-negotiable:
 - The \`thesis\` is a VERDICT in one sentence. Take a position. If you can't, you don't
   understand the file yet — read more.
