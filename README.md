@@ -72,22 +72,19 @@ Your agent will loop through the high-gravity files, analyze each one, and build
 
 1. **Level 0 — Pillar Detection**: Regex-matches import strings against known library patterns (e.g., `passport` → Auth, `stripe` → Payments, `prisma` → Database) to auto-categorize files.
 
-2. **Level 1 — Cognitive Weight**: Tree-Sitter AST analysis computes a complexity score per file:
-   ```
-   cognitiveWeight = (linkDensity × 2) + nestingDepth + (mutationCount × 1.5)
-   ```
-   Files scoring ≥ 15 are **High-Gravity**. Files ≥ 25 are **Wild Discoveries**.
+2. **Level 1 — Cognitive Weight**: Tree-Sitter AST analysis computes a complexity score per file based on link density, nesting depth, and mutation counts. Files scoring ≥ 15 are **High-Gravity**.
 
-3. **Level 2 — Unlabeled Clustering**: Files without pillar tags are grouped by directory for the agent to name.
+3. **Level 2 — Behavioral Traceability**: Tree-Sitter powered call-graph analysis. It maps function-level dependencies and identifies **Critical Functions** (entrypoints, semantic actions, or high-outbound callers) so your agent can trace the exact ripple effect of a change.
 
 ## MCP Tools
 
-VIBE-SPLAIN exposes **7 tools** over MCP stdio:
+VIBE-SPLAIN exposes **8 tools** over MCP stdio:
 
 | Tool | Purpose |
 |------|---------|
 | `scan_project` | **Call first.** Scans the codebase, returns high-gravity files grouped by pillar. Starts file watcher. |
 | `get_file_context` | Returns full source + import graph neighbors for a specific file. |
+| `get_call_chain` | **New.** Traces function-level call chains (upstream/downstream) to map behavior paths. |
 | `write_decision_card` | Persists a Decision Card (narrative + evidence + optional Mermaid diagram). |
 | `get_strategic_overview` | Returns dossier state without evidence snippets (saves tokens). |
 | `inspect_pillar` | Returns all Decision Cards for a pillar with full evidence. |
@@ -99,10 +96,23 @@ VIBE-SPLAIN exposes **7 tools** over MCP stdio:
 ```
 1. scan_project → get high-gravity files
 2. For each file: get_file_context → read source + neighbors
-3. Synthesize: "WHY does this code exist?"
-4. write_decision_card → persist the narrative
-5. Share the file:// UI link with the user
+3. Trace: use get_call_chain to see what calls what
+4. Synthesize: "WHY does this code exist?"
+5. write_decision_card → persist the narrative
+6. Share the file:// UI link with the user
 ```
+
+## How It Works
+
+### Deep Analysis Pipeline
+Unlike simple regex scanners, VIBE-SPLAIN runs a deterministic **13-stage pipeline**—from AST inventory and alias resolution to semantic classification and function-level scoring—to ensure every Decision Card is grounded in actual code paths.
+
+### Semantic Rulesets
+Built on a pluggable architecture, VIBE-SPLAIN uses specialized rulesets to understand framework-specific semantics like:
+- **Next.js**: Server Actions, `cookies()`, `headers()`, and App Router conventions.
+- **Database**: Prisma model mutations and raw query patterns.
+- **API**: tRPC procedure calls (`mutate`/`query`) and standard `fetch`/`axios` patterns.
+- **Auth**: Clerk, NextAuth, and custom rate-limiting/validation logic.
 
 ## Dossier UI
 
