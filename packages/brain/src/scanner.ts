@@ -723,7 +723,7 @@ function pageRank(nodes: string[], outEdges: Map<string, Set<string>>, damping =
 }
 
 // ── Label-propagation community detection (undirected real-source graph) ────
-function detectCommunities(nodes: string[], adjacency: Map<string, Set<string>>): Map<string, number> {
+function detectCommunities(nodes: string[], adjacency: Map<string, Map<string, number>>): Map<string, number> {
   const label = new Map<string, number>();
   nodes.forEach((node, i) => label.set(node, i));
   const order = [...nodes];
@@ -734,9 +734,9 @@ function detectCommunities(nodes: string[], adjacency: Map<string, Set<string>>)
       const neighbors = adjacency.get(node);
       if (!neighbors || neighbors.size === 0) continue;
       const counts = new Map<number, number>();
-      for (const nb of neighbors) {
+      for (const [nb, weight] of neighbors) {
         const l = label.get(nb)!;
-        counts.set(l, (counts.get(l) || 0) + 1);
+        counts.set(l, (counts.get(l) || 0) + weight);
       }
       let best = label.get(node)!, bestCount = -1;
       for (const [l, c] of counts) {
@@ -919,15 +919,20 @@ export async function scanProject(projectRoot: string): Promise<ScanResult> {
   const realNodes = work.filter(w => isRealSource.get(w.rel)).map(w => w.rel);
   const realSet = new Set(realNodes);
   const outEdges = new Map<string, Set<string>>();
-  const undirected = new Map<string, Set<string>>();
-  for (const node of realNodes) { outEdges.set(node, new Set()); undirected.set(node, new Set()); }
+  const undirected = new Map<string, Map<string, number>>();
+  for (const node of realNodes) { outEdges.set(node, new Set()); undirected.set(node, new Map()); }
   for (const w of work) {
     if (!realSet.has(w.rel)) continue;
     for (const target of importsResolved.get(w.rel)!) {
       if (!realSet.has(target)) continue;
       outEdges.get(w.rel)!.add(target);
-      undirected.get(w.rel)!.add(target);
-      undirected.get(target)!.add(w.rel);
+      
+      const wDir = w.rel.split(sep)[0];
+      const tDir = target.split(sep)[0];
+      const weight = wDir === tDir ? 1.0 : 0.5;
+
+      undirected.get(w.rel)!.set(target, weight);
+      undirected.get(target)!.set(w.rel, weight);
     }
   }
   const ranks = pageRank(realNodes, outEdges);
@@ -1089,20 +1094,50 @@ function buildPillars(real: FileAnalysis[], communities: Map<string, number>, _s
     return gravB - gravA;
   });
 
-  // Ensure unique names
-  const seen = new Set<string>();
-  for (const p of pillars) {
-    let n = p.name, i = 2;
-    while (seen.has(n)) { n = `${p.name} ${i++}`; }
-    p.name = n; seen.add(n);
-  }
-
   // Fallback: if no pillars at all, create a single "Core" pillar
   if (pillars.length === 0 && real.length > 0) {
     pillars.push({ name: 'Core', description: 'Primary application code.', memberFiles: real.slice(0, 20).map(f => f.relativePath) });
   }
 
-  return pillars;
+  // Phase 3: Subdivide Mega-Pillars (>15 files)
+  const finalPillars: PillarDef[] = [];
+  for (const p of pillars) {
+    if (p.memberFiles.length > 15) {
+      const groups = new Map<string, string[]>();
+      for (const f of p.memberFiles) {
+        let bucket = 'Core';
+        if (f.includes('app/') || f.includes('pages/') || f.includes('routes/')) bucket = 'Routing';
+        else if (f.includes('components/') || f.includes('ui/')) bucket = 'Components';
+        else if (f.includes('hooks/') || f.includes('lib/') || f.includes('utils/')) bucket = 'Logic';
+        
+        const d = basename(dirname(f));
+        const key = `${p.name} (${bucket} - ${d})`;
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key)!.push(f);
+      }
+      for (const [key, files] of groups) {
+        if (files.length > 0) {
+          finalPillars.push({
+            name: key,
+            description: `Subdivided from ${p.name}`,
+            memberFiles: files,
+          });
+        }
+      }
+    } else {
+      finalPillars.push(p);
+    }
+  }
+
+  // Ensure unique names
+  const seen = new Set<string>();
+  for (const p of finalPillars) {
+    let n = p.name, i = 2;
+    while (seen.has(n)) { n = `${p.name} ${i++}`; }
+    p.name = n; seen.add(n);
+  }
+
+  return finalPillars;
 }
 
 // Derive a pillar name from a community-detected cluster of files.

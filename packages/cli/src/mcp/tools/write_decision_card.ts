@@ -33,7 +33,7 @@ export const writeDecisionCardTool = {
       narrative: { type: 'string', description: "3-5 sentences. WHY it exists and WHY it's built this way. Do NOT restate the file's header comments." },
       tradeoff: { type: 'string', description: 'What was given up, or why the obvious approach was rejected. Null only if genuinely none.' },
       blastRadius: { type: 'string', description: 'What breaks if this changes. Ground it in the fan-in (importedBy) from get_file_context.' },
-      confidence: { type: 'string', enum: ['low', 'medium', 'high'] },
+      confidence: { type: 'string', enum: ['low', 'medium', 'high'], description: 'Do NOT default to "high". Reserve "high" ONLY for provable execution anti-patterns. Score subjective stylistic choices or abstractions as "low" or "medium".' },
       evidence: {
         type: 'array',
         items: {

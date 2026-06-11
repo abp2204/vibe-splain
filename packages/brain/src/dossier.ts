@@ -84,11 +84,37 @@ export async function readDossier(projectRoot: string): Promise<Dossier | null> 
 
 export async function writeDossier(projectRoot: string, dossier: Dossier): Promise<void> {
   await dossierMutex.runExclusive(async () => {
+    // Aggressive Boilerplate Culling
+    for (const p of dossier.pillars) {
+      p.decisions = p.decisions.filter(c => !(c.severity === 1 && c.category === 'Convention'));
+      p.cardCount = p.decisions.length;
+    }
+
+    // The "Target Lock" Payload
+    const uniqueCards = new Map<string, DecisionCard>();
+    for (const p of dossier.pillars) {
+      for (const c of p.decisions) uniqueCards.set(c.id, c);
+    }
+    for (const c of dossier.wildDiscoveries) uniqueCards.set(c.id, c);
+
+    const deltaTargets = Array.from(uniqueCards.values())
+      .filter(c => c.severity >= 4)
+      .map(c => ({
+        target_path: c.primaryFile,
+        bottleneck_title: c.title,
+        structural_intent: c.thesis,
+        evidence_snippets: c.evidence
+      }));
+
     const dir = join(projectRoot, '.vibe-splainer');
     await mkdir(dir, { recursive: true });
     const dossierPath = join(dir, 'dossier.json');
     const tmp = dossierPath + '.tmp';
     await writeFile(tmp, JSON.stringify(dossier, null, 2), 'utf8');
+
+    const targetsPath = join(dir, 'delta_targets.json');
+    await writeFile(targetsPath, JSON.stringify(deltaTargets, null, 2), 'utf8');
+
     // Atomic rename on POSIX
     const { rename } = await import('fs/promises');
     await rename(tmp, dossierPath);

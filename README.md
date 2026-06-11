@@ -1,7 +1,7 @@
 <p align="center">
   <strong>◈ VIBE-SPLAIN</strong>
   <br />
-  <em>Understand any vibe-coded project in minutes, not days.</em>
+  <em>Understand any vibe-coded TypeScript/JavaScript project in minutes, not days.</em>
 </p>
 
 <p align="center">
@@ -14,7 +14,7 @@
 
 ---
 
-VIBE-SPLAIN is an **MCP server** that runs inside your coding agent (Claude Code, Gemini CLI, Cursor, Windsurf). It performs surgical static analysis of a codebase using [Tree-Sitter](https://tree-sitter.github.io/tree-sitter/), identifies the high-gravity files that hold architectural decisions, and exposes them as MCP tools for your agent to synthesize into an **Architectural Dossier**.
+VIBE-SPLAIN is an **MCP server** that runs inside your coding agent (Claude Code, Gemini CLI, Cursor, Windsurf). It performs surgical static analysis of a codebase using [Tree-Sitter](https://tree-sitter.github.io/tree-sitter/). While it can run on many languages, it is specifically tailored and best-suited for **TypeScript and JavaScript** projects. It identifies the high-gravity files that hold architectural decisions, and exposes them as MCP tools for your agent to synthesize into an **Architectural Dossier**.
 
 **Zero LLM calls. Zero API keys. Pure static analysis.**
 

@@ -1,7 +1,7 @@
 {
   "name": "vibe-splain",
-  "version": "2.2.0",
-  "description": "Architectural dossier engine for vibe-coded projects. Runs as an MCP server inside your coding agent.",
+  "version": "2.3.0",
+  "description": "Architectural dossier engine for vibe-coded TypeScript/JavaScript projects. Runs as an MCP server inside your coding agent.",
   "type": "module",
   "license": "MIT",
   "author": "abp2204",
