@@ -44,6 +44,7 @@ export async function handleGetFileContext(args: Record<string, unknown>): Promi
     heatSignals: evidence.heatSignals,
     importedBy: persisted?.importedBy ?? [],
     imports: persisted?.imports ?? [],
+    pillarHint: persisted?.pillarHint ?? null,
     signature: evidence.signature,
     hotSpans: evidence.hotSpans,
     smellSpans: evidence.smellSpans,

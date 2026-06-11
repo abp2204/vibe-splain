@@ -100,6 +100,70 @@ const VENDOR_SEGMENTS = new Set([
   'node_modules', 'vendor', 'vendored', 'site-packages', 'third_party', 'third-party',
 ]);
 
+// ── Level 0 heuristic: keyword-based pillar matching ──────────────────────────
+const PILLAR_KEYWORDS: Record<string, string[]> = {
+  'Auth':     ['passport', 'jsonwebtoken', 'bcrypt', 'bcryptjs', 'oauth', 'session',
+               'cookie-parser', 'next-auth', '@auth/', 'lucia', 'clerk', '@clerk/',
+               'supabase/auth', '@supabase/auth-helpers', 'iron-session', 'jose', 'jwt',
+               '@auth/core', 'arctic'],
+  'Database': ['prisma', '@prisma/', 'mongoose', 'sequelize', 'typeorm', 'knex',
+               'pg', 'mysql', 'mysql2', 'better-sqlite3', 'drizzle-orm', 'drizzle',
+               'kysely', '@supabase/supabase-js', 'mongodb', 'redis', 'ioredis'],
+  'Payments': ['stripe', '@stripe/', 'paypal', 'braintree', 'plaid', 'lemonsqueezy',
+               '@lemonsqueezy/', 'paddle', 'lemon-squeezy'],
+  'Routing':  ['express', 'fastify', 'koa', 'koa-router', 'next/router',
+               'next/navigation', 'react-router', '@remix-run/', 'hono',
+               'express-rate-limit', 'cors', 'helmet'],
+  'Queue':    ['bull', 'bullmq', 'amqplib', 'kafkajs', 'kafka',
+               'upstash', '@upstash/', 'bee-queue', 'agenda'],
+  'Storage':  ['aws-sdk', '@aws-sdk/', 'multer', 'cloudinary',
+               '@google-cloud/storage', 'minio', '@vercel/blob',
+               'sharp', 'imagekit'],
+  'Config':   ['dotenv', 'convict', 'env-var', '@t3-oss/env',
+               'envalid'],
+  'Email':    ['nodemailer', 'resend', '@sendgrid/', 'postmark', '@resend/',
+               'mailgun'],
+  'Realtime': ['socket.io', 'ws', 'pusher', 'ably', '@supabase/realtime',
+               'socket.io-client'],
+};
+
+const PILLAR_PATH_PATTERNS: Record<string, RegExp> = {
+  'Auth':     /(?:^|[\/\\])(?:auth|login|signup|register|session|oauth)(?:[\/\\]|$)/i,
+  'Database': /(?:^|[\/\\])(?:db|database|models?|schema|migrations?|seeds?)(?:[\/\\]|$)/i,
+  'Payments': /(?:^|[\/\\])(?:pay|payments?|billing|checkout|subscriptions?|stripe)(?:[\/\\]|$)/i,
+  'Routing':  /(?:^|[\/\\])(?:routes?|router|middleware|api)(?:[\/\\]|$)/i,
+  'Queue':    /(?:^|[\/\\])(?:queues?|workers?|jobs?|consumers?|producers?)(?:[\/\\]|$)/i,
+  'Storage':  /(?:^|[\/\\])(?:storage|uploads?|s3|blobs?|media)(?:[\/\\]|$)/i,
+  'Config':   /(?:^|[\/\\])(?:config|env|settings?)(?:[\/\\]|$)/i,
+  'Email':    /(?:^|[\/\\])(?:emails?|mail|notifications?)(?:[\/\\]|$)/i,
+};
+
+// Meaningless path segments to skip when generating pillar names
+const MEANINGLESS_SEGMENTS = new Set([
+  'src', 'lib', 'app', 'pages', 'components', 'modules', 'features',
+  'core', 'common', 'shared', 'internal', 'pkg', 'packages',
+]);
+
+function matchPillarByImports(importSpecs: string[]): string | null {
+  const scores = new Map<string, number>();
+  for (const spec of importSpecs) {
+    for (const [pillar, keywords] of Object.entries(PILLAR_KEYWORDS)) {
+      if (keywords.some(kw => spec === kw || spec.startsWith(kw + '/'))) {
+        scores.set(pillar, (scores.get(pillar) || 0) + 1);
+      }
+    }
+  }
+  if (scores.size === 0) return null;
+  return [...scores.entries()].sort((a, b) => b[1] - a[1])[0][0];
+}
+
+function matchPillarByPath(relPath: string): string | null {
+  for (const [pillar, pattern] of Object.entries(PILLAR_PATH_PATTERNS)) {
+    if (pattern.test(relPath)) return pillar;
+  }
+  return null;
+}
+
 async function collectFiles(dir: string, projectRoot: string, acc: string[]): Promise<void> {
   let entries;
   try {
@@ -880,10 +944,19 @@ export async function scanProject(projectRoot: string): Promise<ScanResult> {
       fanIn, fanOut: fanOut.get(w.rel) || 0, centrality,
       cyclomatic: w.ast.cyclomatic, publicSurface: w.ast.publicSurface, loc: w.ast.loc,
     };
-    let gravityRaw = centrality * 50
-      + Math.log2(fanIn + 1) * 8
-      + Math.log2(w.ast.cyclomatic + 1) * 4
-      + Math.log2(w.ast.publicSurface + 1) * 3;
+    // Depth factor: ratio of internal complexity to surface area.
+    // High for files with gnarly internals; low for barrel re-exports and thin wrappers.
+    const depthRatio = (w.ast.cyclomatic + w.ast.maxNesting * 2) / Math.max(1, w.ast.publicSurface);
+    const depthFactor = Math.min(1.0, Math.log2(depthRatio + 1) / 3);
+    // Penalize centrality for shallow files — a barrel index.ts with 50 re-exports
+    // shouldn't dominate the gravity chart.
+    const adjustedCentrality = centrality * (0.3 + 0.7 * depthFactor);
+
+    let gravityRaw = adjustedCentrality * 50
+      + Math.log2(fanIn + 1) * 6           // reduced from 8 — less weight on raw import count
+      + Math.log2(w.ast.cyclomatic + 1) * 7 // increased from 4 — reward complex domain logic
+      + Math.log2(w.ast.publicSurface + 1) * 2  // reduced from 3
+      + (w.ast.maxNesting >= 4 ? 5 : 0);    // bonus for deeply nested control flow
     if (!real) gravityRaw *= 0.2;
     const gravity = Math.max(0, Math.min(100, gravityRaw));
 
@@ -897,7 +970,10 @@ export async function scanProject(projectRoot: string): Promise<ScanResult> {
     };
     const heat = real ? computeHeat(w.ast.smells) : 0;
 
-    const pillarHint = real ? `community-${communities.get(w.rel)}` : null;
+    // Level 0: keyword match > path match > community detection fallback
+    const keywordPillar = matchPillarByImports(w.importSpecs);
+    const pathPillar = matchPillarByPath(w.rel);
+    const pillarHint = real ? (keywordPillar || pathPillar || `community-${communities.get(w.rel)}`) : null;
 
     const fa: FileAnalysis = {
       path: w.abs, relativePath: w.rel, language: w.lang,
@@ -943,57 +1019,124 @@ export async function scanProject(projectRoot: string): Promise<ScanResult> {
   };
 }
 
-function buildPillars(real: FileAnalysis[], communities: Map<string, number>, stack: string[]): PillarDef[] {
-  const groups = new Map<number, FileAnalysis[]>();
-  for (const a of real) {
-    const c = communities.get(a.relativePath);
-    if (c === undefined) continue;
-    if (!groups.has(c)) groups.set(c, []);
-    groups.get(c)!.push(a);
-  }
-  // sort communities by aggregate gravity; keep meaningful ones (>=2 files), cap at 6
-  const sorted = [...groups.entries()]
-    .map(([id, files]) => ({ id, files, weight: files.reduce((s, f) => s + f.gravity, 0) }))
-    .filter(g => g.files.length >= 2)
-    .sort((a, b) => b.weight - a.weight)
-    .slice(0, 6);
+function buildPillars(real: FileAnalysis[], communities: Map<string, number>, _stack: string[]): PillarDef[] {
+  // ── Phase 1: Group files with Level 0 keyword/path hints into named pillars ──
+  const keywordGroups = new Map<string, FileAnalysis[]>();
+  const unlabeled: FileAnalysis[] = [];
 
-  const pillars: PillarDef[] = sorted.map((g, idx) => {
-    const top = [...g.files].sort((a, b) => b.gravity - a.gravity);
-    const name = pillarName(top, idx);
-    return {
+  for (const a of real) {
+    if (a.pillarHint && !a.pillarHint.startsWith('community-')) {
+      // File has a keyword or path-based pillar match
+      if (!keywordGroups.has(a.pillarHint)) keywordGroups.set(a.pillarHint, []);
+      keywordGroups.get(a.pillarHint)!.push(a);
+    } else {
+      unlabeled.push(a);
+    }
+  }
+
+  // Build keyword pillars (only if ≥1 file — even a single file with a keyword match is meaningful)
+  const pillars: PillarDef[] = [];
+  for (const [name, files] of keywordGroups) {
+    const sorted = [...files].sort((a, b) => b.gravity - a.gravity);
+    pillars.push({
       name,
-      description: `Graph cluster of ${g.files.length} files centered on ${basename(top[0].relativePath)}.`,
-      memberFiles: top.map(f => f.relativePath),
-    };
+      description: `${name} subsystem: ${files.length} file${files.length > 1 ? 's' : ''} centered on ${basename(sorted[0].relativePath)}.`,
+      memberFiles: sorted.map(f => f.relativePath),
+    });
+  }
+
+  // ── Phase 2: Group remaining unlabeled files by community detection ──
+  if (unlabeled.length > 0) {
+    const communityGroups = new Map<number, FileAnalysis[]>();
+    for (const a of unlabeled) {
+      const c = communities.get(a.relativePath);
+      if (c === undefined) continue;
+      if (!communityGroups.has(c)) communityGroups.set(c, []);
+      communityGroups.get(c)!.push(a);
+    }
+
+    // Sort by aggregate gravity, keep clusters ≥2 files, cap remaining slots
+    const remainingSlots = Math.max(0, 6 - pillars.length);
+    const sorted = [...communityGroups.entries()]
+      .map(([id, files]) => ({ id, files, weight: files.reduce((s, f) => s + f.gravity, 0) }))
+      .filter(g => g.files.length >= 2)
+      .sort((a, b) => b.weight - a.weight)
+      .slice(0, remainingSlots);
+
+    for (const g of sorted) {
+      const top = [...g.files].sort((a, b) => b.gravity - a.gravity);
+      const name = pillarNameFromCluster(top);
+
+      // If this cluster's best name matches an existing keyword pillar, merge into it
+      const existing = pillars.find(p => p.name === name);
+      if (existing) {
+        existing.memberFiles.push(...top.map(f => f.relativePath));
+        existing.description = `${name} subsystem: ${existing.memberFiles.length} files centered on ${basename(existing.memberFiles[0])}.`;
+      } else {
+        pillars.push({
+          name,
+          description: `${g.files.length} files centered on ${basename(top[0].relativePath)}.`,
+          memberFiles: top.map(f => f.relativePath),
+        });
+      }
+    }
+  }
+
+  // Sort pillars by aggregate gravity of member files
+  pillars.sort((a, b) => {
+    const gravA = real.filter(f => a.memberFiles.includes(f.relativePath)).reduce((s, f) => s + f.gravity, 0);
+    const gravB = real.filter(f => b.memberFiles.includes(f.relativePath)).reduce((s, f) => s + f.gravity, 0);
+    return gravB - gravA;
   });
 
-  // ensure unique names
+  // Ensure unique names
   const seen = new Set<string>();
   for (const p of pillars) {
     let n = p.name, i = 2;
     while (seen.has(n)) { n = `${p.name} ${i++}`; }
     p.name = n; seen.add(n);
   }
+
+  // Fallback: if no pillars at all, create a single "Core" pillar
   if (pillars.length === 0 && real.length > 0) {
     pillars.push({ name: 'Core', description: 'Primary application code.', memberFiles: real.slice(0, 20).map(f => f.relativePath) });
   }
+
   return pillars;
 }
 
-function pillarName(files: FileAnalysis[], idx: number): string {
-  // derive from common directory of the cluster
+// Derive a pillar name from a community-detected cluster of files.
+// Skips meaningless directory segments (src, lib, app, etc.) and picks
+// the most semantically informative segment.
+function pillarNameFromCluster(files: FileAnalysis[]): string {
+  // Check if most files in the cluster share a keyword/path hint
+  const hintCounts = new Map<string, number>();
+  for (const f of files) {
+    if (f.pillarHint && !f.pillarHint.startsWith('community-')) {
+      hintCounts.set(f.pillarHint, (hintCounts.get(f.pillarHint) || 0) + 1);
+    }
+  }
+  if (hintCounts.size > 0) {
+    const best = [...hintCounts.entries()].sort((a, b) => b[1] - a[1])[0];
+    if (best[1] >= files.length * 0.4) return best[0]; // 40%+ consensus
+  }
+
+  // Fall back to directory-based naming, but skip meaningless segments
   const dirs = files.map(f => dirname(f.relativePath)).filter(d => d && d !== '.');
   if (dirs.length) {
-    const counts = new Map<string, number>();
+    const segCounts = new Map<string, number>();
     for (const d of dirs) {
-      const seg = d.split(sep).pop()!;
-      counts.set(seg, (counts.get(seg) || 0) + 1);
+      const segments = d.split(sep).filter(s => !MEANINGLESS_SEGMENTS.has(s.toLowerCase()));
+      const meaningful = segments.pop(); // deepest meaningful segment
+      if (meaningful) segCounts.set(meaningful, (segCounts.get(meaningful) || 0) + 1);
     }
-    const top = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+    const top = [...segCounts.entries()].sort((a, b) => b[1] - a[1])[0];
     if (top) return titleCase(top[0]);
   }
-  return `Cluster ${idx + 1}`;
+
+  // Ultimate fallback: name after the highest-gravity file
+  const topFile = basename(files[0].relativePath, extname(files[0].relativePath));
+  return titleCase(topFile);
 }
 
 function titleCase(s: string): string {
