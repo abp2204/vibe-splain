@@ -1,0 +1,49 @@
+{
+  "name": "vibe-splain",
+  "version": "1.0.0",
+  "description": "Architectural dossier engine for vibe-coded projects. Runs as an MCP server inside your coding agent.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Aayush Patel",
+  "homepage": "https://github.com/aayushpatel/vibe-splain#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aayushpatel/vibe-splain.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/aayushpatel/vibe-splain/issues"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "tree-sitter",
+    "static-analysis",
+    "architecture",
+    "documentation",
+    "coding-agent",
+    "claude",
+    "gemini",
+    "cursor"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": { "vibe-splain": "./dist/index.js" },
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@vibe-splain/brain": "*",
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "commander": "^12.0.0",
+    "fs-extra": "^11.0.0",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.0",
+    "@types/uuid": "^9.0.0",
+    "typescript": "^5.4.0"
+  },
+  "files": ["dist/", "!dist/**/*.map"]
+}

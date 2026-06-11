@@ -1,0 +1,10 @@
+{
+  "name": "vibe-splain-monorepo",
+  "private": true,
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "build": "npm run build -w packages/brain && npm run build -w packages/cli && npm run build -w packages/ui && node scripts/bundle-ui.js",
+    "dev:ui": "npm run dev -w packages/ui",
+    "release": "npm run build && cd packages/cli && npm publish"
+  }
+}

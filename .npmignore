@@ -1,0 +1,7 @@
+broken_build/
+packages/brain/src/
+packages/cli/src/
+packages/ui/src/
+*.ts
+!*.d.ts
+.vibe-splainer/
