@@ -79,7 +79,7 @@ export async function handleScanProject(args: Record<string, unknown>, options: 
     message: statusMsg,
     scanId,
     manifestPointer,
-    validation: {
+    validation: result.fullValidationReport || {
       passed: validation.passed,
       errors: validation.errors,
       warnings: validation.warnings,

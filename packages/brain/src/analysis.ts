@@ -34,17 +34,44 @@ export interface PersistedFile {
   productDomain: ProductDomain;
   sideEffectProfile: SideEffect[];
   hotSpans: HotSpan[];
+  source: string;
   // Pipeline-computed classification (populated by classification + scoring stages)
   riskTypes: RiskType[];
   writeIntents: WriteIntent[];
+  runtimeEntrypoints: RuntimeEntrypoint[];
+  entrypointTraceStatus: 'complete' | 'partial' | 'partial_wrong_surface' | 'blocked_by_alias_resolution' | 'no_runtime_entrypoint_found';
   canonicalSeverity: 1 | 2 | 3 | 4 | 5;
   canonicalLoadBearing: boolean;
   isOperationallyCritical: boolean; // ADR-019
   confidence: 'low' | 'medium' | 'high'; // ADR-019
 }
 
+// ── Validation report types (stage 12) ───────────────────────────────────────
+
+export interface ValidationFinding {
+  file: string;
+  rule: string;
+  detail: string;
+  expected?: string;
+  actual?: string;
+}
+
+export interface ValidationReport {
+  timestamp: string;
+  passed: boolean;
+  errors: ValidationFinding[];
+  warnings: ValidationFinding[];
+  summary: { 
+    errorCount: number; 
+    warningCount: number; 
+    passCount: number;
+    entrypointTraceCoverage?: number; // ADR-020
+  };
+}
+
 export interface AnalysisStore {
   files: Record<string, PersistedFile>;
+  validationReport?: ValidationReport;
 }
 
 export async function readAnalysis(projectRoot: string): Promise<AnalysisStore | null> {

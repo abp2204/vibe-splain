@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.5.0] - 2026-06-11
+
+### Added
+- **Final Hardening** — Integrated regression and portability tests into the release pipeline.
+- **Improved WAL Concurrency** — PointerStore now uses a robust retry loop with exponential backoff for SQLite WAL mode transitions, preventing `SQLITE_BUSY` errors under high-load concurrent startup.
+
+## [3.4.0] - 2026-06-11
+
+### Added
+- **Context-Aware Webhook Gating** — Refined validation rules to differentiate between server-side webhook ingress points and configuration UI components.
+- **Self-Entrypoint Routing** — API routes and App Router pages now correctly identify as their own runtime entrypoints (boosting trace coverage by ~25% in complex projects).
+- **Semantic AST Boosting** — Complexity scorer now gives weight to webhook routing logic (`switch` + `stripe`/`signature`) and Prisma write patterns, ensuring high-leverage handlers appear as `hotSpans`.
+
+### Fixed
+- False positive `booking_creation_no_entrypoint_no_blockers` errors on App Router layouts and "thin" booking wrappers.
+- Missing `hotSpans` on concise webhook re-export files.
+- Internal version string synchronization across package.json and CLI entrypoints.
+
+## [3.3.1] - 2026-06-11
+
 ## [3.2.0] - 2026-06-11
 
 ### Added

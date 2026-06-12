@@ -854,7 +854,20 @@ export function analyzeAst(source: string, lang: Language, tree: Parser.Tree): A
   for (const fn of fnNodes) {
     const bodyLOC = nodeLOC(fn);
     const decisions = countDecisions(fn);
-    scored.push({ node: fn, decisions, bodyLOC, score: decisions + bodyLOC });
+    let score = decisions + bodyLOC;
+
+    // Boost webhook handlers & main entrypoint logic
+    const text = fn.text;
+    if (lang === 'typescript' || lang === 'tsx' || lang === 'javascript') {
+      if (/stripe|webhook|payload|signature|event/i.test(text) && /switch|case|if/i.test(text)) {
+        score += 25;
+      }
+      if (text.includes('prisma') && (text.includes('create') || text.includes('update'))) {
+        score += 10;
+      }
+    }
+
+    scored.push({ node: fn, decisions, bodyLOC, score });
     if (bodyLOC > LONG_FN_LOC) {
       longFunctions++;
       smells.push({
@@ -880,7 +893,7 @@ export function analyzeAst(source: string, lang: Language, tree: Parser.Tree): A
   }
 
   scored.sort((a, b) => b.score - a.score);
-  const hotSpans = scored.slice(0, 3).filter(s => s.bodyLOC >= 4).map(s => {
+  const hotSpans = scored.slice(0, 3).filter(s => s.bodyLOC >= 2).map(s => {
     const rawExcerpt = source.split('\n')
       .slice(s.node.startPosition.row, s.node.endPosition.row + 1)
       .join('\n');

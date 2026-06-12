@@ -37,6 +37,7 @@ export interface ScanResult {
     warnings: number;
     reportPath: string;
   };
+  fullValidationReport?: import('./analysis.js').ValidationReport;
 }
 
 // ── Main scan — thin shim over pipeline orchestrator ─────────────────────────

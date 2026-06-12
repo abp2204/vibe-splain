@@ -49,7 +49,7 @@ export function inferSideEffectProfile(
 
   // Webhook ingress — expanded
   if (
-    /stripe\.webhooks\.(constructEvent|constructEventAsync)|webhookSecret|validateWebhook|verifyWebhook|verifySignature/.test(source) ||
+    /stripe\.webhooks\.(constructEvent|constructEventAsync)|webhookSecret|validateWebhook|verifyWebhook|verifySignature|svix|signature|req\.body|req\.rawBody/.test(source) ||
     (productDomain === 'payments_webhooks' && frameworkRole === 'pages_api_route')
   ) effects.add('webhook_ingress');
 
@@ -57,7 +57,7 @@ export function inferSideEffectProfile(
   if (
     importSpecs.some(s => /stripe|paypal|btcpay|alby/.test(s.toLowerCase())) ||
     /stripe\.|paymentIntent|createPaymentIntent|confirmPayment|createCharge/.test(source) ||
-    (productDomain === 'payments_webhooks' && effects.has('webhook_ingress'))
+    (productDomain === 'payments_webhooks' && (effects.has('webhook_ingress') || source.includes('webhook')))
   ) effects.add('payment_mutation');
 
   if (/signIn\b|signOut\b|createSession|destroySession|issueToken|refreshToken|getToken/.test(source)) {
@@ -208,18 +208,17 @@ export function findRuntimeEntrypoints(
     if (seen.has(current.path)) continue;
     seen.add(current.path);
 
-    if (current.path !== relPath) {
-      const meta = persisted.get(current.path);
-      if (meta && ENTRYPOINT_ROLES.has(meta.frameworkRole)) {
-        results.push({
-          path: current.path,
-          frameworkRole: meta.frameworkRole,
-          productDomain: meta.productDomain,
-          distance: current.depth,
-        });
-        if (results.length >= 8) break;
-        continue;
-      }
+    const meta = persisted.get(current.path);
+    if (meta && ENTRYPOINT_ROLES.has(meta.frameworkRole)) {
+      results.push({
+        path: current.path,
+        frameworkRole: meta.frameworkRole,
+        productDomain: meta.productDomain,
+        distance: current.depth,
+      });
+      if (results.length >= 8) break;
+      // If we found an entrypoint, don't keep searching up from it
+      continue;
     }
 
     if (current.depth >= maxDepth) continue;

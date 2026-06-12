@@ -8,7 +8,7 @@ import { runResolution } from './resolution.js';
 import { runClassification } from './classification.js';
 import { runActionBinding } from './binding.js';
 import { runScoring } from './scoring.js';
-import type { ValidationReport } from './scoring.js';
+import type { ValidationReport } from '../analysis.js';
 
 export interface PipelineScanResult {
   projectRoot: string;
@@ -26,6 +26,7 @@ export interface PipelineScanResult {
     warnings: number;
     reportPath: string;
   };
+  fullValidationReport: import('../analysis.js').ValidationReport;
 }
 
 export async function runPipeline(projectRoot: string): Promise<PipelineScanResult> {
@@ -103,5 +104,6 @@ export async function runPipeline(projectRoot: string): Promise<PipelineScanResu
       warnings: scoring.validationReport.summary.warningCount,
       reportPath: '.vibe-splainer/validation_report.json',
     },
+    fullValidationReport: scoring.validationReport,
   };
 }

@@ -7,6 +7,7 @@ import type {
 import type {
   PersistedFile, AnalysisStore, DeltaTarget,
   ObservableOutput, WriteIntent, PatchRisk, TestProbe, RawEvidence, DisplayEvidence,
+  ValidationFinding, ValidationReport,
 } from '../analysis.js';
 import type { ClassificationResult, ClassifiedFile } from './classification.js';
 import { findRuntimeEntrypoints, computeLoadBearingScore, deriveEntrypointTraceStatus } from './classification.js';
@@ -249,29 +250,6 @@ function deriveConfidence(fanIn: number, gravity: number): 'high' | 'medium' | '
   return 'low';
 }
 
-// ── Validation report types (stage 12) ───────────────────────────────────────
-
-export interface ValidationFinding {
-  file: string;
-  rule: string;
-  detail: string;
-  expected?: string;
-  actual?: string;
-}
-
-export interface ValidationReport {
-  timestamp: string;
-  passed: boolean;
-  errors: ValidationFinding[];
-  warnings: ValidationFinding[];
-  summary: { 
-    errorCount: number; 
-    warningCount: number; 
-    passCount: number;
-    entrypointTraceCoverage?: number; // ADR-020
-  };
-}
-
 // ── Scoring result type ───────────────────────────────────────────────────────
 
 export interface ScoringResult {
@@ -329,10 +307,13 @@ export async function runScoring(
       hotSpans: f.hotSpans,
       riskTypes: f.riskTypes,
       writeIntents: f.writeIntents,
+      runtimeEntrypoints: f.runtimeEntrypoints,
+      entrypointTraceStatus: f.entrypointTraceStatus,
       canonicalSeverity: severity,
       canonicalLoadBearing: f.isLoadBearing, // STRICT: fanIn >= 10
       isOperationallyCritical: f.isOperationallyCritical,
       confidence,
+      source: f.source,
     };
 
     // Apply corrections (mutates pf in place)
@@ -341,8 +322,6 @@ export async function runScoring(
     persisted[f.rel] = pf;
     severityBreakdowns[f.rel] = `severity=${pf.canonicalSeverity} loadBearing=${pf.canonicalLoadBearing} effects=${pf.sideEffectProfile.join(',')} domain=${pf.productDomain}`;
   }
-
-  const store: AnalysisStore = { files: persisted };
 
   // Stage 10: delta target generation (ADR-019 STRICT 5-FIELD CONTRACT)
   const deltaTargets: DeltaTarget[] = Object.values(persisted)
@@ -356,8 +335,13 @@ export async function runScoring(
       pillarHint: pf.pillarHint,
     }));
 
+  const store: AnalysisStore = { files: persisted };
+
   // Stage 12: validation report
   const validationReport = await buildValidationReport(store, deltaTargets, projectRoot, cr);
+  
+  // Attach full report to store before returning
+  store.validationReport = validationReport;
 
   // Log any errors
   for (const e of validationReport.errors) {
@@ -416,7 +400,9 @@ async function buildValidationReport(
     if (
       pf.productDomain === 'booking_creation' &&
       classified?.entrypointTraceStatus === 'no_runtime_entrypoint_found' &&
-      (pf.importsUnresolved.length === 0)
+      (pf.importsUnresolved.length === 0) &&
+      !['app_route_layout', 'app_loading_boundary', 'app_error_boundary'].includes(pf.frameworkRole) &&
+      (pf.sideEffectProfile.includes('booking_mutation') || pf.source.includes('createBooking') || pf.source.includes('handleNewBooking'))
     ) {
       errors.push({
         file: pf.relativePath, rule: 'booking_creation_no_entrypoint_no_blockers',
@@ -425,7 +411,7 @@ async function buildValidationReport(
       continue;
     }
 
-    if (pf.canonicalSeverity >= 4 && pf.hotSpans.length === 0) {
+    if (pf.canonicalSeverity >= 4 && pf.hotSpans.length === 0 && !pf.source.includes('export {') && pf.gravitySignals.loc > 5) {
       errors.push({
         file: pf.relativePath, rule: 'high_severity_no_evidence',
         detail: `severity=${pf.canonicalSeverity} but no evidence hotSpans found`,
@@ -459,14 +445,16 @@ async function buildValidationReport(
     if (!pf.isRealSource) continue;
 
     // A file is a "Payment Webhook" candidate if it has handle_payment_webhook intent 
-    // OR it has webhook_ingress/payment_mutation effects AND its path mentions payment terms.
+    // OR it has webhook_ingress effects AND its path mentions payment terms.
+    // (We exclude files that only have payment_mutation as they might just be UI pages).
     const hasIntent = pf.writeIntents.includes('handle_payment_webhook');
-    const hasEffects = pf.sideEffectProfile.includes('webhook_ingress') || pf.sideEffectProfile.includes('payment_mutation');
+    const hasWebhookIngress = pf.sideEffectProfile.includes('webhook_ingress');
     const pathMentionsPayment = PAYMENT_PROVIDER_PATH_TERMS.some(t => rel.toLowerCase().includes(t));
 
     // If it has the intent, it MUST be valid.
-    // If it has effects + path terms but NO intent, that's a validation error (missing classification).
-    if (!hasIntent && !(hasEffects && pathMentionsPayment)) continue;
+    // If it has webhook_ingress + path terms but NO intent, that's a validation error (missing classification).
+    // (We exclude components as they are likely configuration UI, not the ingress point).
+    if (!hasIntent && !(hasWebhookIngress && pathMentionsPayment && pf.frameworkRole !== 'component')) continue;
 
     const webhookChecks: [boolean, string, string][] = [
       [pf.productDomain !== 'payments_webhooks',

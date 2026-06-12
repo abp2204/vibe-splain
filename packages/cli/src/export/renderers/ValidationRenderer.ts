@@ -3,14 +3,15 @@ import type { Renderer } from './Renderer.js';
 import type { Artifact } from '../ArtifactBundleWriter.js';
 
 export class ValidationRenderer implements Renderer {
-  render(viewModel: DossierViewModel, _store: AnalysisStore): Artifact[] {
-    if (!viewModel.map.validation) return [];
+  render(viewModel: DossierViewModel, store: AnalysisStore): Artifact[] {
+    const report = store.validationReport || viewModel.map.validation;
+    if (!report) return [];
 
     return [
       {
         type: 'validation',
         path: 'validation_report.json',
-        content: JSON.stringify(viewModel.map.validation, null, 2),
+        content: JSON.stringify(report, null, 2),
       }
     ];
   }
