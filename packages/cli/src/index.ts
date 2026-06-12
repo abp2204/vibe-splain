@@ -12,7 +12,7 @@ const program = new Command();
 program
   .name('vibe-splain')
   .description('Architectural dossier engine for vibe-coded projects')
-  .version('3.5.0');
+  .version('3.4.0');
 
 program
   .command('install')
