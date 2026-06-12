@@ -97,7 +97,7 @@ export function inferWriteIntents(
 ): WriteIntent[] {
   const intents: WriteIntent[] = [];
 
-  if (productDomain === 'booking_creation') {
+  if (productDomain === 'booking_creation' || productDomain === 'booking_ui_delegate') {
     intents.push('create_booking');
     if (relPath.includes('reschedule') || relPath.includes('Reschedule')) intents.push('reschedule_booking');
     if (relPath.includes('recurring') || relPath.includes('Recurring')) intents.push('create_recurring_booking');
@@ -180,6 +180,10 @@ const DOMAIN_SURFACE_PATTERNS: Partial<Record<ProductDomain, { expected: RegExp[
   booking_creation: {
     expected: [/book/i, /booking/i, /reschedule/i, /booking-success/i, /api\/book/i, /create-booking/i],
     wrong: [/event-type/i, /event-types/i, /eventtypes/i, /availability/i, /schedule/i],
+  },
+  booking_ui_delegate: {
+    expected: [/book/i, /booking/i, /reschedule/i, /event-type/i, /event-types/i],
+    wrong: [/settings/i, /admin/i, /onboarding/i],
   },
   payments_webhooks: {
     expected: [/webhook/i, /stripe/i, /payment/i],
@@ -287,7 +291,7 @@ export function computeLoadBearingScore(
   if (sideEffectProfile.includes('analytics_event')) score += 1;
 
   const highImpactDomains: ProductDomain[] = [
-    'booking_creation', 'payments', 'auth_oauth', 'webhooks', 'payments_webhooks',
+    'booking_creation', 'booking_ui_delegate', 'payments', 'auth_oauth', 'webhooks', 'payments_webhooks',
   ];
   if (highImpactDomains.includes(productDomain)) score += 2;
 

@@ -24,6 +24,13 @@ async function runCalcomScan() {
     'pages/api/stripe/webhook.ts'
   ];
 
+  const formPath = 'modules/bookings/components/BookEventForm/BookEventForm.tsx';
+  const pf = result.store.files[formPath];
+  console.error(`\n--- Verification for ${formPath} ---`);
+  console.error(`Product Domain: ${pf?.productDomain}`);
+  console.error(`Write Intents: ${JSON.stringify(pf?.writeIntents)}`);
+  console.error(`Entrypoints: ${JSON.stringify(pf?.runtimeEntrypoints.map(e => e.rel))}`);
+
   console.error('\n--- hotSpans for Webhook Files ---');
   for (const f of webhookFiles) {
     const pf = result.store.files[f];

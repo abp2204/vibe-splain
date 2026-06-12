@@ -40,6 +40,12 @@ async function runTest() {
     assert(typeof report.summary === 'object', 'report.summary should be an object');
     assert(typeof report.summary.errorCount === 'number', 'report.summary.errorCount should be a number');
 
+    // Check coverage metrics metadata
+    assert(typeof report.summary.entrypointTraceCoverageNumerator === 'number', 'entrypointTraceCoverageNumerator should be a number');
+    assert(typeof report.summary.entrypointTraceCoverageDenominator === 'number', 'entrypointTraceCoverageDenominator should be a number');
+    assert(typeof report.summary.entrypointTraceCoverageDefinition === 'string', 'entrypointTraceCoverageDefinition should be a string');
+    assert(typeof report.summary.coverageBaselineNote === 'string', 'coverageBaselineNote should be a string');
+
     // Check the result returned to MCP
     assert(Array.isArray(result.validation.errors), 'result.validation.errors should be an array');
     

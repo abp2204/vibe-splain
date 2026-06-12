@@ -1,6 +1,6 @@
 {
   "name": "vibe-splain",
-  "version": "3.4.0",
+  "version": "3.4.1",
   "description": "Architectural mapping and behavioral call-chain engine. Built on a language-agnostic foundation with specialized optimization for TypeScript/JavaScript projects.",
   "type": "module",
   "license": "MIT",

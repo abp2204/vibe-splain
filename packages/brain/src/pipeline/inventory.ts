@@ -179,13 +179,16 @@ export function inferProductDomain(relPath: string, importSpecs: string[]): Prod
   if (p.includes('booking-audit') || p.includes('bookingaudit')) return 'booking_audit';
 
   if (
-    p.includes('bookeventform') || p.includes('availabletimes') ||
-    p.includes('availabletimeslots') || p.includes('usebookings') ||
     p.includes('/pages/api/book/') || p.includes('/api/book/') ||
     p.includes('/booking-successful/') || p.includes('/reschedule/') ||
-    p.includes('booking-page-wrapper') ||
-    (p.includes('/book/') && !p.includes('booking-audit'))
+    p.includes('booking-page-wrapper')
   ) return 'booking_creation';
+
+  if (
+    p.includes('bookeventform') || p.includes('availabletimes') ||
+    p.includes('availabletimeslots') || p.includes('usebookings') ||
+    (p.includes('/book/') && !p.includes('booking-audit'))
+  ) return 'booking_ui_delegate';
 
   if (
     p.includes('modules/bookings') || p.includes('components/booking/actions') ||

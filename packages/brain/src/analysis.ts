@@ -65,7 +65,11 @@ export interface ValidationReport {
     errorCount: number; 
     warningCount: number; 
     passCount: number;
-    entrypointTraceCoverage?: number; // ADR-020
+    entrypointTraceCoverage?: number; 
+    entrypointTraceCoverageNumerator?: number;
+    entrypointTraceCoverageDenominator?: number;
+    entrypointTraceCoverageDefinition?: string;
+    coverageBaselineNote?: string;
   };
 }
 

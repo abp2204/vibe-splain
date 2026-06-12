@@ -58,6 +58,7 @@ export type ProductDomain =
   | 'booking_creation'
   | 'booking_management'
   | 'booking_audit'
+  | 'booking_ui_delegate'
   | 'event_type_configuration'
   | 'availability'
   | 'auth'

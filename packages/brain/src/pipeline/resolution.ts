@@ -86,8 +86,25 @@ async function extractTsConfigPaths(
       baseFile = join(dirname(tsconfigPath), baseFile);
     } else {
       // Might be a node_modules base (e.g. @tsconfig/node18/tsconfig.json)
-      baseFile = join(projectRoot, 'node_modules', baseFile);
-      if (!baseFile.endsWith('.json')) baseFile += '.json';
+      // Search upwards for node_modules (ADR-020 Monorepo Support)
+      let currentDir = dirname(tsconfigPath);
+      let found = false;
+      while (currentDir.length >= projectRoot.length || currentDir === projectRoot) {
+        const candidate = join(currentDir, 'node_modules', baseFile + (baseFile.endsWith('.json') ? '' : '.json'));
+        if (existsSync(candidate)) {
+          baseFile = candidate;
+          found = true;
+          break;
+        }
+        const parent = dirname(currentDir);
+        if (parent === currentDir) break;
+        currentDir = parent;
+      }
+      if (!found) {
+        // Fallback to project root node_modules
+        baseFile = join(projectRoot, 'node_modules', baseFile);
+        if (!baseFile.endsWith('.json')) baseFile += '.json';
+      }
     }
     const base = await extractTsConfigPaths(baseFile, projectRoot, depth + 1);
     Object.assign(result, base);
@@ -169,17 +186,20 @@ async function discoverWorkspacePackages(projectRoot: string): Promise<Record<st
 // ── Fallback conventional aliases ────────────────────────────────────────────
 
 const CONVENTIONAL_ALIASES: Array<{ prefix: string; replacement: string }> = [
+  { prefix: '~/',            replacement: 'modules/' },
   { prefix: '~/',            replacement: '' },
+  { prefix: '@calcom/web/',  replacement: '' },
+  { prefix: '@calcom/web/',  replacement: 'modules/' },
   { prefix: '@components/',  replacement: 'components/' },
   { prefix: '@lib/',         replacement: 'lib/' },
   { prefix: '@server/',      replacement: 'server/' },
-  { prefix: '@calcom/web/',  replacement: '' },
+  { prefix: '@calcom/features/', replacement: '../../packages/features/src/' },
   { prefix: '@calcom/features/', replacement: '../packages/features/' },
-  { prefix: '@calcom/lib/',  replacement: '../packages/lib/' },
-  { prefix: '@calcom/prisma/', replacement: '../packages/prisma/' },
-  { prefix: '@calcom/trpc/', replacement: '../packages/trpc/' },
-  { prefix: '@calcom/ui/',   replacement: '../packages/ui/' },
-  { prefix: '@calcom/emails/', replacement: '../packages/emails/' },
+  { prefix: '@calcom/lib/',  replacement: '../../packages/lib/' },
+  { prefix: '@calcom/prisma/', replacement: '../../packages/prisma/' },
+  { prefix: '@calcom/trpc/', replacement: '../../packages/trpc/' },
+  { prefix: '@calcom/ui/',   replacement: '../../packages/ui/' },
+  { prefix: '@calcom/emails/', replacement: '../../packages/emails/' },
 ];
 
 // ── Build the full alias map ──────────────────────────────────────────────────
@@ -304,14 +324,17 @@ export function resolveImportWithAliasMap(
     }
 
     // Fallback: conventional aliases
+    let matchedPrefix = false;
     for (const { prefix, replacement } of CONVENTIONAL_ALIASES) {
       if (spec.startsWith(prefix)) {
+        matchedPrefix = true;
         const rest = replacement + spec.slice(prefix.length);
         const base = join(projectRoot, rest);
         const resolved = tryJsCandidates(base, projectRoot, fileSet);
         if (resolved) return { resolved, isAlias: true };
       }
     }
+    if (matchedPrefix) return { resolved: null, isAlias: true };
 
     return { resolved: null, isAlias: false }; // external package
   }

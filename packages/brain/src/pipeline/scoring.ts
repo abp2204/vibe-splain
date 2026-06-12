@@ -481,7 +481,16 @@ async function buildValidationReport(
     passed: errors.length === 0,
     errors,
     warnings,
-    summary: { errorCount: errors.length, warningCount: warnings.length, passCount, entrypointTraceCoverage: coverage },
+    summary: { 
+      errorCount: errors.length, 
+      warningCount: warnings.length, 
+      passCount, 
+      entrypointTraceCoverage: coverage,
+      entrypointTraceCoverageNumerator: tracedCount,
+      entrypointTraceCoverageDenominator: realCount,
+      entrypointTraceCoverageDefinition: 'Percentage of real source files, excluding vendored and mock code, successfully traced to a complete runtime entrypoint.',
+      coverageBaselineNote: 'Not directly comparable to pre alias resolution scans because isRealSource classification changed.'
+    },
   };
 }
 
