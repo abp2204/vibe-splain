@@ -1,0 +1,65 @@
+{
+  "name": "vibe-splain",
+  "version": "3.5.0",
+  "description": "Static-analysis MRI for codebases: a Tree-Sitter dossier engine and deterministic PreToolUse safety gate for coding agents. Language-agnostic core, optimized for TypeScript/JavaScript.",
+  "type": "module",
+  "license": "MIT",
+  "author": "abp2204",
+  "homepage": "https://github.com/abp2204/vibe-splain#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/abp2204/vibe-splain.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/abp2204/vibe-splain/issues"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "tree-sitter",
+    "static-analysis",
+    "architecture",
+    "documentation",
+    "coding-agent",
+    "claude",
+    "gemini",
+    "cursor"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "vibe-splain": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc && node build.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "better-sqlite3": "^12.10.0",
+    "chokidar": "^3.6.0",
+    "commander": "^12.0.0",
+    "fs-extra": "^11.0.0",
+    "tar": "^7.5.16",
+    "tree-sitter-wasms": "^0.1.11",
+    "web-tree-sitter": "^0.22.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/fs-extra": "^11.0.0",
+    "@types/minimatch": "^5.1.2",
+    "@types/tar": "^6.1.13",
+    "@types/uuid": "^9.0.0",
+    "async-mutex": "^0.5.0",
+    "esbuild": "^0.28.0",
+    "minimatch": "^10.2.5",
+    "tsx": "^4.22.4",
+    "typescript": "^5.4.0",
+    "uuid": "^9.0.0"
+  },
+  "files": [
+    "dist/",
+    "!dist/**/*.map"
+  ]
+}
