@@ -18,7 +18,7 @@ This is an npm workspaces monorepo with three packages:
 | Package | Path | Purpose |
 |---------|------|---------|
 | `@vibesplain/brain` | `packages/brain/` | Tree-Sitter analysis engine (pure, no I/O side effects) |
-| `vibesplain` | `packages/cli/` | MCP server + CLI (published to npm) |
+| `vibe-splain` | `packages/cli/` | MCP server + CLI (published to npm as `vibe-splain`, binary is `vibesplain`) |
 | `@vibesplain/ui` | `packages/ui/` | React dossier viewer (embedded into cli at build time) |
 
 Build order matters: **brain → cli → ui → bundle-ui**.

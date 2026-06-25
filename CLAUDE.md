@@ -40,12 +40,12 @@ npm run release
 
 ## Architecture
 
-Three packages, one published artifact (`vibesplain` CLI):
+Three packages, one published artifact (`vibe-splain` on npm, binary is `vibesplain`):
 
 ```
 packages/
 ├── brain/   # @vibesplain/brain — pure static analysis, no network
-├── cli/     # vibesplain — MCP server + CLI (publishes to npm)
+├── cli/     # vibe-splain (npm) / vibesplain (binary) — MCP server + CLI
 └── ui/      # @vibesplain/ui — React dossier viewer (private, embedded into cli)
 ```
 

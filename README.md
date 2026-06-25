@@ -145,7 +145,7 @@ packages/
 │       ├── analysis.ts       # Scored file store + validation report
 │       └── graph.ts          # Import graph read/write
 │
-├── cli/      # vibesplain — MCP server + CLI (the published npm package)
+├── cli/      # vibe-splain (npm) / vibesplain (binary) — MCP server + CLI
 │   └── src/
 │       ├── index.ts          # CLI entrypoint
 │       ├── commands/
