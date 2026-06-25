@@ -51,7 +51,7 @@ export async function startMCPServer(options: any = {}): Promise<void> {
   console.error('[vibesplain] Tree-Sitter parser initialized');
 
   const server = new Server(
-    { name: 'vibesplain', version: '3.5.0' },
+    { name: 'vibesplain', version: '4.0.0' },
     { capabilities: { tools: {}, prompts: {} } }
   );
 

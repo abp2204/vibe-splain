@@ -9,7 +9,7 @@ const program = new Command();
 program
   .name('vibesplain')
   .description('Architectural dossier engine for vibe-coded projects')
-  .version('3.5.0');
+  .version('4.0.0');
 
 program
   .command('scan')

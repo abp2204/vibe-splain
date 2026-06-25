@@ -1,6 +1,6 @@
 {
   "name": "vibesplain",
-  "version": "3.5.0",
+  "version": "4.0.0",
   "description": "Static-analysis dossier engine for codebases: Tree-Sitter powered architectural analysis and interactive UI. Language-agnostic core, optimized for TypeScript/JavaScript.",
   "type": "module",
   "license": "MIT",
