@@ -31,7 +31,7 @@ const AGENT_CONFIGS: AgentConfig[] = [
 
 const MCP_ENTRY = {
   command: 'npx',
-  args: ['-y', 'vibesplain', 'serve'],
+  args: ['-y', 'vibe-splain', 'serve'],
 };
 
 export async function installCommand(): Promise<void> {

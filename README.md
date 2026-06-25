@@ -24,7 +24,7 @@ The output is a self-contained HTML file you can open in any browser.
 ## Install
 
 ```bash
-npx vibesplain install
+npx vibe-splain install
 ```
 
 This patches your coding agent's config to register vibesplain as an MCP server. Restart your agent afterward.
