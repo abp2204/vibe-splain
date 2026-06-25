@@ -1,4 +1,4 @@
-import type { DossierViewModel, AnalysisStore, DecisionCard } from '@vibe-splain/brain';
+import type { DossierViewModel, AnalysisStore, DecisionCard } from '@vibesplain/brain';
 import type { Renderer } from './Renderer.js';
 import type { Artifact } from '../ArtifactBundleWriter.js';
 

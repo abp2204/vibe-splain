@@ -26,9 +26,9 @@ export class ArtifactBundleWriter {
   constructor(private projectRoot: string) {}
 
   async writeBundle(artifacts: Artifact[]): Promise<void> {
-    const outputDir = join(this.projectRoot, '.vibe-splainer');
-    const stagingDir = join(this.projectRoot, '.vibe-splainer.tmp');
-    const oldDir = join(this.projectRoot, '.vibe-splainer.old');
+    const outputDir = join(this.projectRoot, '.vibesplain');
+    const stagingDir = join(this.projectRoot, '.vibesplain.tmp');
+    const oldDir = join(this.projectRoot, '.vibesplain.old');
     
     try {
       await rm(stagingDir, { recursive: true, force: true });

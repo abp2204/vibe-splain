@@ -91,7 +91,7 @@ npx tsx packages/cli/tests/test_pretooluse_hook.ts
 These require manual verification or integration tests against a real project:
 
 - `scan_project` end-to-end on a real TypeScript codebase (Tree-Sitter WASM init, `graph.json`, `dossier.json` generation).
-- `vibe-splain serve` MCP server startup and tool registration (JSON-RPC transport).
+- `vibesplain serve` MCP server startup and tool registration (JSON-RPC transport).
 - UI `file://` rendering of injected `window.__VIBE_DOSSIER__` (Vite single-file build).
-- `vibe-splain install` agent config patcher for Claude / Cursor / VS Code.
+- `vibesplain install` agent config patcher for Claude / Cursor / VS Code.
 - `console.log` absence check — any stray `console.log` in `brain/` or `cli/` corrupts the MCP stdio stream. Verify with: `grep -rn 'console\.log' packages/brain/src packages/cli/src`.

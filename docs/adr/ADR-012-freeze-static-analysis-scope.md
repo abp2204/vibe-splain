@@ -1,4 +1,4 @@
-# ADR-012 — Freeze Static Analysis Scope at vibe-splain v0.4
+# ADR-012 — Freeze Static Analysis Scope at vibesplain v0.4
 
 **Status:** Accepted — Implemented
 **Date:** 2026-06-11
@@ -8,11 +8,11 @@
 
 ## Context
 
-vibe-splain is a static analysis tool whose purpose is to produce a trustworthy map for Delta Engine to consume. It is not the end product. The end product is runtime proof: shadow traffic, write sink verification, and safe modernization of the target codebase.
+vibesplain is a static analysis tool whose purpose is to produce a trustworthy map for Delta Engine to consume. It is not the end product. The end product is runtime proof: shadow traffic, write sink verification, and safe modernization of the target codebase.
 
 Without an explicit scope boundary, static analysis work expands indefinitely. Each gap found in the static output creates pressure to add more detection logic, more risk types, more scoring rules. The local optimum trap is: a perfect static map is achievable in theory, and every incremental improvement feels justified, while the actual product risk — runtime proof — is never reached.
 
-The v0.4 work addresses five critical target families: booking orchestration, payment webhooks, form registry, form registry consumer, and data table state machines. These represent the core correctness requirements for the static map. Once these five families score correctly and the validation report passes its known fixture checks, vibe-splain has produced a trustworthy enough static map to begin shadow testing.
+The v0.4 work addresses five critical target families: booking orchestration, payment webhooks, form registry, form registry consumer, and data table state machines. These represent the core correctness requirements for the static map. Once these five families score correctly and the validation report passes its known fixture checks, vibesplain has produced a trustworthy enough static map to begin shadow testing.
 
 ---
 
@@ -46,7 +46,7 @@ Work that cannot be traced to one of these four requirements is deferred to v0.5
 
 ## Rationale
 
-The static map exists to enable runtime proof. vibe-splain's role is to identify where the risk is — not to achieve perfect static understanding of the entire codebase. Once the five target families are correctly classified, the map is trustworthy enough to begin shadow testing against real traffic.
+The static map exists to enable runtime proof. vibesplain's role is to identify where the risk is — not to achieve perfect static understanding of the entire codebase. Once the five target families are correctly classified, the map is trustworthy enough to begin shadow testing against real traffic.
 
 Continued expansion of static analysis past this point delays the actual modernization claim while producing diminishing returns. The next major risk is runtime behavior: does the shadow match live? do writes apply idempotently? are the critical surfaces reachable through the proxy? These questions cannot be answered by static analysis alone.
 
@@ -56,8 +56,8 @@ The scope boundary rule is explicit so future contributors have a decision crite
 
 ## Consequences
 
-- After v0.4 ships, issues filed against vibe-splain's static analysis must reference a specific proxy or runtime requirement. Issues without that reference are labeled v0.5 and parked.
+- After v0.4 ships, issues filed against vibesplain's static analysis must reference a specific proxy or runtime requirement. Issues without that reference are labeled v0.5 and parked.
 - v0.5 static work is driven by gaps the proxy reveals, not by gaps found in the static report.
-- The boundary between vibe-splain (static MRI) and Delta Engine (runtime surgeon) becomes explicit: v0.4 is the handoff point.
+- The boundary between vibesplain (static MRI) and Delta Engine (runtime surgeon) becomes explicit: v0.4 is the handoff point.
 - Some static analysis gaps will remain after v0.4. This is intentional. A gap that doesn't affect runtime shadow safety is not a blocker.
 - CONTEXT.md and CLAUDE.md should be updated at v0.4 ship to reflect that new static analysis features require proxy justification.

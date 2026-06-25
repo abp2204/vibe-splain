@@ -1,7 +1,7 @@
 import { join, dirname, relative, basename } from 'path';
 import { fileURLToPath } from 'url';
 import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
-import type { DossierViewModel, AnalysisStore } from '@vibe-splain/brain';
+import type { DossierViewModel, AnalysisStore } from '@vibesplain/brain';
 import type { Renderer } from './Renderer.js';
 import type { Artifact } from '../ArtifactBundleWriter.js';
 
@@ -56,7 +56,7 @@ export class HtmlRenderer implements Renderer {
     }
     
     if (!templateDir) {
-      console.error('[vibe-splain] UI template not found. Checked:', candidatePaths);
+      console.error('[vibesplain] UI template not found. Checked:', candidatePaths);
       return [];
     }
 

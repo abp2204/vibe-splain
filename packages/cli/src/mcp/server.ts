@@ -6,7 +6,7 @@ import {
   ListPromptsRequestSchema,
   GetPromptRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import { initParser } from '@vibe-splain/brain';
+import { initParser } from '@vibesplain/brain';
 import { handleScanProject, scanProjectTool } from './tools/scan_project.js';
 import { handleGetProjectMap, getProjectMapTool } from './tools/get_project_map.js';
 import { handleSetProjectBrief, setProjectBriefTool } from './tools/set_project_brief.js';
@@ -16,11 +16,6 @@ import { handleGetStrategicOverview, getStrategicOverviewTool } from './tools/ge
 import { handleInspectPillar, inspectPillarTool } from './tools/inspect_pillar.js';
 import { handleGetWildDiscoveries, getWildDiscoveriesTool } from './tools/get_wild_discoveries.js';
 import { handleMarkStale, markStaleTool } from './tools/mark_stale.js';
-import { handleGetFileSkeleton, getFileSkeletonTool } from './tools/get_file_skeleton.js';
-import { handleReadFile, readFileTool } from './tools/read_file.js';
-import { handleGetStartHere, getStartHereTool } from './tools/hydration/get_start_here.js';
-import { handleGetProjectSummary, getProjectSummaryTool } from './tools/hydration/get_project_summary.js';
-import { handleGetEvidenceSlice, getEvidenceSliceTool } from './tools/hydration/get_evidence_slice.js';
 
 // ⚠️ CRITICAL: Never use console.log() anywhere in this codebase.
 // stdout is owned by the MCP SDK for protocol messages.
@@ -36,12 +31,6 @@ const ALL_TOOLS = [
   inspectPillarTool,
   getWildDiscoveriesTool,
   markStaleTool,
-  // Phase 2: Skeletons + Hydration
-  getFileSkeletonTool,
-  readFileTool,
-  getStartHereTool,
-  getProjectSummaryTool,
-  getEvidenceSliceTool,
 ];
 
 const TOOL_HANDLERS: Record<string, (args: Record<string, unknown>, options?: any) => Promise<unknown>> = {
@@ -54,21 +43,15 @@ const TOOL_HANDLERS: Record<string, (args: Record<string, unknown>, options?: an
   inspect_pillar: handleInspectPillar,
   get_wild_discoveries: handleGetWildDiscoveries,
   mark_stale: handleMarkStale,
-  // Phase 2
-  get_file_skeleton: handleGetFileSkeleton,
-  read_file: handleReadFile,
-  get_start_here: handleGetStartHere,
-  get_project_summary: handleGetProjectSummary,
-  get_evidence_slice: handleGetEvidenceSlice,
 };
 
 export async function startMCPServer(options: any = {}): Promise<void> {
   // Initialize Tree-Sitter WASM once at startup
   await initParser();
-  console.error('[vibe-splain] Tree-Sitter parser initialized');
+  console.error('[vibesplain] Tree-Sitter parser initialized');
 
   const server = new Server(
-    { name: 'vibe-splain', version: '3.5.0' },
+    { name: 'vibesplain', version: '3.5.0' },
     { capabilities: { tools: {}, prompts: {} } }
   );
 
@@ -77,7 +60,7 @@ export async function startMCPServer(options: any = {}): Promise<void> {
     prompts: [
       {
         name: 'build_dossier',
-        description: 'Build a full architectural dossier using vibe-splain (replaces the need to copy-paste the README prompt)',
+        description: 'Build a full architectural dossier using vibesplain (replaces the need to copy-paste the README prompt)',
       }
     ]
   }));
@@ -182,7 +165,7 @@ When done, share the exact file:// UI link returned by scan_project. Never inven
       };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      console.error(`[vibe-splain] Tool ${name} error:`, message);
+      console.error(`[vibesplain] Tool ${name} error:`, message);
       return {
         content: [{ type: 'text' as const, text: `Error: ${message}` }],
         isError: true,
@@ -192,6 +175,6 @@ When done, share the exact file:// UI link returned by scan_project. Never inven
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error('[vibe-splain] MCP server running on stdio');
+  console.error('[vibesplain] MCP server running on stdio');
   // Process stays alive — do NOT call process.exit() here
 }

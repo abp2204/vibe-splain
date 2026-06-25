@@ -3,12 +3,11 @@ import { resolve } from 'path';
 import { Command } from 'commander';
 import { installCommand } from './commands/install.js';
 import { serveCommand } from './commands/serve.js';
-import { hookPreToolUseCommand } from './commands/hook.js';
 
 const program = new Command();
 
 program
-  .name('vibe-splain')
+  .name('vibesplain')
   .description('Architectural dossier engine for vibe-coded projects')
   .version('3.5.0');
 
@@ -33,7 +32,7 @@ program
 
 program
   .command('install')
-  .description('Patch coding agent MCP config files to register vibe-splain')
+  .description('Patch coding agent MCP config files to register vibesplain')
   .action(installCommand);
 
 program
@@ -44,14 +43,4 @@ program
   .option('--scope <scope>', 'Scope for export')
   .action((options) => serveCommand(options));
 
-const hookCmd = program
-  .command('hook')
-  .description('Deterministic agent hooks (called by your coding agent, not by you)');
-
-hookCmd
-  .command('pretooluse')
-  .description('PreToolUse gate: escalate edits to high-blast-radius files')
-  .action(() => hookPreToolUseCommand());
-
 program.parse();
-

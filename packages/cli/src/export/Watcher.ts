@@ -2,7 +2,7 @@ import chokidar from 'chokidar';
 import { createHash } from 'crypto';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
-import { readDossier } from '@vibe-splain/brain';
+import { readDossier } from '@vibesplain/brain';
 import { ExportOrchestrator } from './ExportOrchestrator.js';
 
 const activeWatchers = new Map<string, chokidar.FSWatcher>();
@@ -17,7 +17,7 @@ export async function startWatcher(projectRoot: string, watchedPaths: string[]):
 
   const watcher = chokidar.watch(watchedPaths.length > 0 ? watchedPaths : projectRoot, {
     ignoreInitial: true,
-    ignored: ['**/node_modules/**', '**/dist/**', '**/build/**', '**/.vibe-splainer/**'],
+    ignored: ['**/node_modules/**', '**/dist/**', '**/build/**', '**/.vibesplain/**'],
     persistent: true,
   });
 
@@ -46,13 +46,13 @@ export async function startWatcher(projectRoot: string, watchedPaths: string[]):
       if (mutated) {
         const orchestrator = new ExportOrchestrator(projectRoot);
         await orchestrator.writeBundle(dossier);
-        console.error(`[vibe-splain] File changed: ${filepath}. Dossier artifacts updated.`);
+        console.error(`[vibesplain] File changed: ${filepath}. Dossier artifacts updated.`);
       }
     } catch (err) {
-      console.error('[vibe-splain] Watcher error:', err);
+      console.error('[vibesplain] Watcher error:', err);
     }
   });
 
   activeWatchers.set(projectRoot, watcher);
-  console.error('[vibe-splain] File watcher started');
+  console.error('[vibesplain] File watcher started');
 }

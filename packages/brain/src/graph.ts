@@ -12,7 +12,7 @@ export interface ImportGraph {
 }
 
 export async function readGraph(projectRoot: string): Promise<ImportGraph | null> {
-  const graphPath = join(projectRoot, '.vibe-splainer', 'graph.json');
+  const graphPath = join(projectRoot, '.vibesplain', 'graph.json');
   try {
     const raw = await readFile(graphPath, 'utf8');
     return JSON.parse(raw) as ImportGraph;
@@ -22,7 +22,7 @@ export async function readGraph(projectRoot: string): Promise<ImportGraph | null
 }
 
 export async function writeGraph(projectRoot: string, graph: ImportGraph): Promise<void> {
-  const dir = join(projectRoot, '.vibe-splainer');
+  const dir = join(projectRoot, '.vibesplain');
   await mkdir(dir, { recursive: true });
   const graphPath = join(dir, 'graph.json');
   await writeFile(graphPath, JSON.stringify(graph, null, 2), 'utf8');

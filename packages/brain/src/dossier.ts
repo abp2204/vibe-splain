@@ -1,6 +1,11 @@
 import { join } from 'path';
 import { readFile, mkdir } from 'fs/promises';
-import type { Recommendation } from './policy/RecommendationEngine.js';
+export interface Recommendation {
+  strategy: string;
+  description: string;
+  effort: 'low' | 'medium' | 'high';
+  impact: 'low' | 'medium' | 'high';
+}
 
 // Types
 export interface Evidence {
@@ -76,7 +81,7 @@ export interface DossierViewModel extends Dossier {
 }
 
 export async function readDossier(projectRoot: string): Promise<Dossier | null> {
-  const dossierPath = join(projectRoot, '.vibe-splainer', 'dossier.json');
+  const dossierPath = join(projectRoot, '.vibesplain', 'dossier.json');
   try {
     const raw = await readFile(dossierPath, 'utf8');
     return JSON.parse(raw) as Dossier;

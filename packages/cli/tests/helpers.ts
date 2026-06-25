@@ -1,17 +1,15 @@
 import { mkdtempSync, rmSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import { PointerStore } from '../src/store/PointerStore.js';
 
 export function makeTmpDir(): string {
-  return mkdtempSync(join(tmpdir(), 'vibe-test-'));
+  return mkdtempSync(join(tmpdir(), 'vibesplain-test-'));
 }
 
 export function cleanTmpDir(dir: string): void {
   try {
     rmSync(dir, { recursive: true, force: true });
   } catch {}
-  PointerStore.reset();
 }
 
 export function assert(condition: boolean, message: string): void {

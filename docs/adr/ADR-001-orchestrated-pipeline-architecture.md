@@ -44,7 +44,7 @@ packages/brain/src/pipeline/
 
 `scanner.ts` becomes a thin compatibility shim that calls `orchestrator.run()`. The public `scanProject` API is unchanged for MCP callers.
 
-Each stage writes an intermediate JSON artifact to `.vibe-splainer/` (e.g. `stage-01-inventory.json`). Artifacts are **overwritten on every run** — they are debugging checkpoints, not persistent history.
+Each stage writes an intermediate JSON artifact to `.vibesplain/` (e.g. `stage-01-inventory.json`). Artifacts are **overwritten on every run** — they are debugging checkpoints, not persistent history.
 
 ---
 

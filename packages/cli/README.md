@@ -1,5 +1,5 @@
 <p align="center">
-  <strong>◈ vibe-splain</strong>
+  <strong>◈ vibesplain</strong>
   <br />
   <em>Map architectural DNA and behavioral call-chains in complex codebases.</em>
 </p>
@@ -14,31 +14,31 @@
 
 ---
 
-vibe-splain is a high-fidelity **static analysis engine** and MCP server. It uses [Tree-Sitter](https://tree-sitter.github.io/tree-sitter/) to extract the structural and behavioral patterns of a codebase—identifying high-gravity components, mapping semantic actions, and tracing call-chains between entrypoints and side effects.
+vibesplain is a high-fidelity **static analysis engine** and MCP server. It uses [Tree-Sitter](https://tree-sitter.github.io/tree-sitter/) to extract the structural and behavioral patterns of a codebase—identifying high-gravity components, mapping semantic actions, and tracing call-chains between entrypoints and side effects.
 
-While vibe-splain is built on a language-agnostic foundation, the current toolset is **highly optimized for TypeScript and JavaScript** (especially Next.js, Prisma, and tRPC environments).
+While vibesplain is built on a language-agnostic foundation, the current toolset is **highly optimized for TypeScript and JavaScript** (especially Next.js, Prisma, and tRPC environments).
 
 **Zero LLM calls. Zero API keys. Pure static analysis.**
 
-Your coding agent does all the thinking — vibe-splain just gives it the right data.
+Your coding agent does all the thinking — vibesplain just gives it the right data.
 
 ## Install
 
 ```bash
-npx vibe-splain install
+npx vibesplain install
 ```
 
-That's it. This patches your coding agent's MCP config so it can call vibe-splain's tools. Restart your agent.
+That's it. This patches your coding agent's MCP config so it can call vibesplain's tools. Restart your agent.
 
 ### Running the Analysis
 
-You don't need to write a complex prompt. vibe-splain provides a built-in MCP Prompt called `build_dossier` that automatically tells your agent exactly what to do.
+You don't need to write a complex prompt. vibesplain provides a built-in MCP Prompt called `build_dossier` that automatically tells your agent exactly what to do.
 
 **In Claude Code / Gemini CLI:**
 Type `/prompt build_dossier` and press enter.
 
 **In Cursor / Windsurf:**
-Open the MCP panel or agent chat, select the `build_dossier` prompt from the vibe-splain server, and run it.
+Open the MCP panel or agent chat, select the `build_dossier` prompt from the vibesplain server, and run it.
 
 Your agent will loop through the high-gravity files, analyze each one, and build an **Architectural Dossier** — a structured set of **Decision Cards** explaining the technical rationale of the code.
 
@@ -63,7 +63,7 @@ Your agent will loop through the high-gravity files, analyze each one, and build
 │  narratives + diagrams                                  │
 │       │                                                 │
 │       ▼                                                 │
-│  write_decision_card ──► .vibe-splainer/dossier.json    │
+│  write_decision_card ──► .vibesplain/dossier.json    │
 │                               │                         │
 │                               ▼                         │
 │                    file:// Dossier UI                    │
@@ -77,16 +77,16 @@ Your agent will loop through the high-gravity files, analyze each one, and build
 
 ### Claude Code PreToolUse Hook
 
-`vibe-splain` integrates directly with Claude Code's hook system to prevent AI agents from accidentally breaking your codebase:
+`vibesplain` integrates directly with Claude Code's hook system to prevent AI agents from accidentally breaking your codebase:
 
 - **Ultra-Fast Local Gating**: Installs a standalone entrypoint (`dist/hook.js`) that runs in **< 15ms** with zero network calls, avoiding heavy WASM/tree-sitter load overhead.
 - **Hybrid Blast-Radius Logic**: Combines static gravity and substance-based direct dependents to protect important files (e.g. dynamically-loaded execution nodes or central utility modules) even if they lack standard entrypoints.
 - **Developer Friction Suppression**: Automatically demotes generated, minified, or vendored files to a `low` blast-radius, ensuring the agent is never blocked when editing build targets or lockfiles.
-- **Warn-Once session behavior**: If `.vibe-splainer/gate.json` is missing, the hook notifies you exactly once per session to run a project scan, then gracefully gets out of the way.
+- **Warn-Once session behavior**: If `.vibesplain/gate.json` is missing, the hook notifies you exactly once per session to run a project scan, then gracefully gets out of the way.
 
 ## MCP Tools
 
-vibe-splain exposes these core dossier tools over MCP stdio:
+vibesplain exposes these core dossier tools over MCP stdio:
 
 | Tool | Purpose |
 |------|---------|
@@ -111,10 +111,10 @@ vibe-splain exposes these core dossier tools over MCP stdio:
 ## How It Works
 
 ### Deep Analysis Pipeline
-Unlike simple regex scanners, vibe-splain runs a deterministic **13-stage pipeline**—from AST inventory and alias resolution to semantic classification and function-level scoring—to ensure every Decision Card is grounded in actual code paths.
+Unlike simple regex scanners, vibesplain runs a deterministic **13-stage pipeline**—from AST inventory and alias resolution to semantic classification and function-level scoring—to ensure every Decision Card is grounded in actual code paths.
 
 ### Semantic Rulesets
-vibe-splain uses specialized rulesets to understand framework-specific semantics. Current optimizations include:
+vibesplain uses specialized rulesets to understand framework-specific semantics. Current optimizations include:
 - **Next.js**: Server Actions, `cookies()`, `headers()`, and App Router conventions.
 - **Database**: Prisma model mutations and raw query patterns.
 - **API**: tRPC procedure calls (`mutate`/`query`) and standard `fetch`/`axios` patterns.
@@ -125,7 +125,7 @@ vibe-splain uses specialized rulesets to understand framework-specific semantics
 After your agent writes Decision Cards, open the generated file in your browser:
 
 ```
-file:///path/to/your/project/.vibe-splainer/ui/index.html
+file:///path/to/your/project/.vibesplain/ui/index.html
 ```
 
 The UI features:
@@ -141,7 +141,7 @@ The UI features:
 
 ```
 packages/
-├── brain/           # @vibe-splain/brain — repo-agnostic static analysis core
+├── brain/           # @vibesplain/brain — repo-agnostic static analysis core
 │   └── src/
 │       ├── pipeline/
 │       │   └── adapters/ # Optional domain-adapter extension point (none bundled)
@@ -149,7 +149,7 @@ packages/
 │       ├── dossier.ts    # Atomic persistence + UI regeneration
 │       ├── graph.ts      # Import graph read/write
 │       └── network/      # Deterministic PreToolUse gate (escalation + gate index)
-├── cli/             # vibe-splain — MCP server + CLI
+├── cli/             # vibesplain — MCP server + CLI
 │   └── src/
 │       ├── index.ts          # #!/usr/bin/env node entry
 │       ├── commands/
@@ -158,7 +158,7 @@ packages/
 │       └── mcp/
 │           ├── server.ts     # @modelcontextprotocol/sdk setup
 │           └── tools/        # 7 tool handlers
-└── ui/              # @vibe-splain/ui — React dossier viewer
+└── ui/              # @vibesplain/ui — React dossier viewer
     └── src/
         ├── App.tsx               # Main app (reads window.__VIBE_DOSSIER__)
         ├── components/           # Header, PillarTabs, DecisionCard, etc.
@@ -167,7 +167,7 @@ packages/
 
 ### Key Design Decisions
 
-- **No LLM calls**: vibe-splain is a pure static analysis tool. The coding agent provides all synthesis.
+- **No LLM calls**: vibesplain is a pure static analysis tool. The coding agent provides all synthesis.
 - **`async-mutex`**: All dossier writes are guarded by a mutex with atomic tmp+rename.
 - **`startOnLoad: false`**: Mermaid is initialized manually — never auto-scans the DOM.
 - **`base: './'`**: Vite builds with relative paths so the UI works from `file://` URLs.
@@ -184,8 +184,8 @@ packages/
 ### Setup
 
 ```bash
-git clone https://github.com/abp2204/vibe-splain.git
-cd vibe-splain
+git clone https://github.com/abp2204/vibesplain.git
+cd vibesplain
 npm install
 ```
 
@@ -225,7 +225,7 @@ Then send JSON-RPC messages over stdin (see [MCP specification](https://modelcon
 npm run release
 ```
 
-Builds everything and publishes the `vibe-splain` CLI package to npm.
+Builds everything and publishes the `vibesplain` CLI package to npm.
 
 ## How the Dossier Stays Fresh
 

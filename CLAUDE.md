@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-**Read `CONTEXT.md` first** — it explains what vibe-splain is and the core architectural decisions.
+**Read `CONTEXT.md` first** — it explains what vibesplain is and the core architectural decisions.
 
 ## Working Mode
 
@@ -40,13 +40,13 @@ npm run release
 
 ## Architecture
 
-Three packages, one published artifact (`vibe-splain` CLI):
+Three packages, one published artifact (`vibesplain` CLI):
 
 ```
 packages/
-├── brain/   # @vibe-splain/brain — pure static analysis, no network
-├── cli/     # vibe-splain — MCP server + CLI (publishes to npm)
-└── ui/      # @vibe-splain/ui — React dossier viewer (private, embedded into cli)
+├── brain/   # @vibesplain/brain — pure static analysis, no network
+├── cli/     # vibesplain — MCP server + CLI (publishes to npm)
+└── ui/      # @vibesplain/ui — React dossier viewer (private, embedded into cli)
 ```
 
 **Build pipeline:** `brain` tsc → `cli` tsc+esbuild (inlines `brain`) → `ui` vite → `scripts/bundle-ui.js` copies `ui/dist/` → `cli/dist/ui/`. The published package is `packages/cli` only.
@@ -57,7 +57,7 @@ packages/
 3. Agent calls `write_decision_card` → brain's `dossier.ts` does atomic write (tmp+rename) + immediately regenerates `ui/index.html` with baked-in JSON
 4. UI is a static `file://` page; data is pre-injected as `window.__VIBE_DOSSIER__` to avoid CORS on `file://` origins
 
-**State:** `dossier.json` is the single source of truth. Nothing is cached in memory between MCP calls — every read/write hits disk. Concurrent writes are serialized by `async-mutex`.
+**State:** `dossier.json` is the single source of truth. Nothing is cached in memory between MCP calls — every read/write hits disk.
 
 ## Critical Constraints
 
@@ -86,12 +86,14 @@ packages/
 | Scored file store + validation report | `packages/brain/src/analysis.ts` |
 | MCP tool registration | `packages/cli/src/mcp/server.ts` |
 | Agent config patcher (`install` command) | `packages/cli/src/commands/install.ts` |
+| Artifact bundle writer (atomic tmp+rename) | `packages/cli/src/export/ArtifactBundleWriter.ts` |
 | UI data injection pattern | `window.__VIBE_DOSSIER__` in `packages/ui/src/App.tsx` |
 
 `dossier.json` is the human/agent-facing output. `analysis.json` is the raw scored file store. Do not merge these two files or conflate their schemas.
 
 ## Gravity Formula
 
+```
 gravity = Math.max(staticGravity, Math.min(100, staticGravity + behavioralLift))
 
 staticGravity = adjustedCentrality × 50
@@ -103,7 +105,7 @@ staticGravity = adjustedCentrality × 50
 adjustedCentrality = pageRankCentrality × (0.3 + 0.7 × depthFactor)
 ```
 
-Core computes `staticGravity`. No adapters ship with the core, so `behavioralLift` is always `0` and `gravity == staticGravity`. The optional `DomainAdapter` extension point (`brain/src/pipeline/adapters/`) is the only place `behavioralLift` can come from.
+No adapters ship with the core, so `behavioralLift` is always `0` and `gravity == staticGravity`. The optional `DomainAdapter` extension point (`brain/src/pipeline/adapters/`) is the only place `behavioralLift` can come from.
 
 Gravity is 0–100. Top 12 real-source files by gravity = `topGravity` (Start Here).
 
@@ -111,7 +113,7 @@ Wild Discovery candidates: `heat ≥ 60` OR any `smell.severity ≥ 4`. Top 12 =
 
 ## esbuild Bundling Note
 
-`packages/cli/build.mjs` runs after `tsc` and bundles `@vibe-splain/brain` inline into `dist/index.js`. All other npm dependencies stay external (they live in `node_modules/` at runtime). The shebang is re-applied by the build script — do not add it to `src/index.ts`.
+`packages/cli/build.mjs` runs after `tsc` and bundles `@vibesplain/brain` inline into `dist/index.js`. All other npm dependencies stay external (they live in `node_modules/` at runtime). The shebang is re-applied by the build script — do not add it to `src/index.ts`.
 
 ## Mermaid in the UI
 

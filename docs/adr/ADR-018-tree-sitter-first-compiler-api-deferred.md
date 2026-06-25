@@ -10,7 +10,7 @@
 
 Two primary tools exist for TypeScript static analysis:
 
-**Tree-Sitter** (`web-tree-sitter`) — already in use in vibe-splain. A streaming incremental parser that produces a concrete syntax tree from source text. Language-agnostic, fast, available for TypeScript/TSX/JavaScript as well as Python, Go, Rust, Java. Operates on source text without needing a TypeScript project configuration. Does not perform type inference.
+**Tree-Sitter** (`web-tree-sitter`) — already in use in vibesplain. A streaming incremental parser that produces a concrete syntax tree from source text. Language-agnostic, fast, available for TypeScript/TSX/JavaScript as well as Python, Go, Rust, Java. Operates on source text without needing a TypeScript project configuration. Does not perform type inference.
 
 **TypeScript Compiler API** (`typescript` npm package) — the official TypeScript compiler exposed as a programmatic API. Produces a typed AST with full type information, symbol resolution, cross-file analysis, declaration merging, and generic instantiation. Requires a `tsconfig.json` to set up a project. TypeScript-only. Significantly heavier and slower than Tree-Sitter for large codebases.
 
@@ -112,7 +112,7 @@ A failure case that affects 5% of call edges in low-gravity utility files does n
 
 **Why invert the language adapters document's recommendation:**
 
-The document's recommendation to use the TypeScript Compiler API was written in the context of a greenfield adapter design. In practice, vibe-splain already has a functioning Tree-Sitter pipeline, an alias resolution system, and a file-level semantic classification system. The TypeScript Compiler API would require:
+The document's recommendation to use the TypeScript Compiler API was written in the context of a greenfield adapter design. In practice, vibesplain already has a functioning Tree-Sitter pipeline, an alias resolution system, and a file-level semantic classification system. The TypeScript Compiler API would require:
 - Setting up a `ts.createProgram` or language service with the correct `tsconfig.json`
 - Handling monorepo tsconfig chains and project references
 - Managing compilation errors in source files (large real-world repos have linting errors that break `strict` mode compilation)

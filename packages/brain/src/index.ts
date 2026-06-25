@@ -7,7 +7,6 @@ export {
   type Dossier, type DossierViewModel, type Pillar, type DecisionCard, type Evidence,
   type CardCategory, type PillarDef, type ProjectMap,
 } from './dossier.js';
-export { RecommendationEngine, type Recommendation } from './policy/RecommendationEngine.js';
 export {
   type Language, type GravitySignals, type HeatSignals,
   type SmellKind, type SmellHit, type FileAnalysis,
@@ -16,5 +15,4 @@ export {
 } from './signals.js';
 export { readGraph, writeGraph, type ImportGraph } from './graph.js';
 export { AdapterRegistry, adapterRegistry, type DomainAdapter } from './pipeline/adapters/index.js';
-export * from './network/index.js';
 

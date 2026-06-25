@@ -134,7 +134,7 @@ export async function runScoring(
   projectRoot: string,
   cr: ClassificationResult,
 ): Promise<ScoringResult> {
-  const dir = join(projectRoot, '.vibe-splainer');
+  const dir = join(projectRoot, '.vibesplain');
   await mkdir(dir, { recursive: true });
 
   // Stage 9: build PersistedFile store + canonical severity
@@ -216,7 +216,7 @@ export async function runScoring(
   // Severity bridge report (verification only). Confirms a fired adapter's
   // domain severity contribution equals core's before ownership moves.
   if (adapterFired) {
-    console.error(`[vibe-splain] severity bridge: ${sevBridgeChecked - sevBridgeMismatch}/${sevBridgeChecked} domain contributions match core (${sevBridgeMismatch} mismatch)`);
+    console.error(`[vibesplain] severity bridge: ${sevBridgeChecked - sevBridgeMismatch}/${sevBridgeChecked} domain contributions match core (${sevBridgeMismatch} mismatch)`);
   }
 
   const store: AnalysisStore = { 
@@ -233,10 +233,10 @@ export async function runScoring(
 
   // Log any errors
   for (const e of validationReport.errors) {
-    console.error(`[vibe-splain] VALIDATION ERROR [${e.rule}] ${e.file}: ${e.detail}`);
+    console.error(`[vibesplain] VALIDATION ERROR [${e.rule}] ${e.file}: ${e.detail}`);
   }
   for (const w of validationReport.warnings) {
-    console.error(`[vibe-splain] VALIDATION WARN [${w.rule}] ${w.file}: ${w.detail}`);
+    console.error(`[vibesplain] VALIDATION WARN [${w.rule}] ${w.file}: ${w.detail}`);
   }
 
   return { store, validationReport };

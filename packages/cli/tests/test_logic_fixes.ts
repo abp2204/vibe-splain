@@ -1,7 +1,7 @@
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { mkdir, mkdtemp, writeFile, rm } from 'fs/promises';
-import { scanProject } from '@vibe-splain/brain';
+import { scanProject } from '@vibesplain/brain';
 import assert from 'assert';
 
 async function testLogicFixes() {

@@ -32,7 +32,7 @@ To prevent "re-read storms", the Orchestrator maintains a Short-Term Memory Cach
 
 ### Garbage Collection & Tiered Expiration
 
-Artifact retention is manifest-driven via a `vibe-splain gc` command:
+Artifact retention is manifest-driven via a `vibesplain gc` command:
 
 1. **Session-local:** Safe to delete when session ends/TTL expires.
 2. **Scan-local:** Keep last `N` successful scans (default 3), plus pinned scans.
@@ -46,7 +46,7 @@ Artifact retention is manifest-driven via a `vibe-splain gc` command:
 ## Implementation
 
 - **`PointerStore`** (`packages/cli/src/store/PointerStore.ts`): SQLite-backed registry. Tables: `pointers`, `work_orders`, `receipts`. Singleton per process. Serialized writes via `async-mutex`.
-- **`BlobStore`** (`packages/cli/src/store/BlobStore.ts`): Content-addressed immutable blobs at `.vibe-splainer/blobs/sha256_<hex>`. Atomic write via `tmp → fsync → rename`.
+- **`BlobStore`** (`packages/cli/src/store/BlobStore.ts`): Content-addressed immutable blobs at `.vibesplain/blobs/sha256_<hex>`. Atomic write via `tmp → fsync → rename`.
 - **`gcCommand`** (`packages/cli/src/commands/gc.ts`): Keeps last N scans by lexicographic scanId sort. Reference-counts blobs from kept pointers before deleting old pointer rows; then deletes unreferenced blobs.
 - **`ArtifactCollectedError`**: thrown by `hydratePointer` in `BudgetGuard.ts` when `expiresAt < Date.now()`.
 - **Verified by:** `test_wal_safety.ts` (WAL safety), `test_budget_guard.ts` (auto-pointer conversion), `test_adversarial.ts` check 7 (GC ref-count).

@@ -1,8 +1,7 @@
 import { readFile, writeFile } from 'fs/promises';
 import { existsSync } from 'fs';
-import { join, dirname } from 'path';
+import { join } from 'path';
 import { homedir } from 'os';
-import { fileURLToPath } from 'url';
 
 interface AgentConfig {
   name: string;
@@ -32,56 +31,11 @@ const AGENT_CONFIGS: AgentConfig[] = [
 
 const MCP_ENTRY = {
   command: 'npx',
-  args: ['-y', 'vibe-splain', 'serve'],
+  args: ['-y', 'vibesplain', 'serve'],
 };
 
-// Claude Code PreToolUse hook: deterministically gate edits to high-blast-radius
-// files. Hooks are a Claude Code CLI feature (settings.json) — not Desktop/Cursor.
-const HOOK_MATCHER = 'Edit|Write|MultiEdit';
-const DEFAULT_HOOK_COMMAND = 'npx -y vibe-splain hook pretooluse';
-
-/**
- * Idempotently register the vibe-splain PreToolUse hook in a Claude Code settings object.
- * Pure: takes a config, returns the same object mutated. Safe to run repeatedly.
- */
-export function addPreToolUseHook(config: Record<string, any>, hookPath?: string): Record<string, any> {
-  if (!config.hooks) config.hooks = {};
-  if (!Array.isArray(config.hooks.PreToolUse)) config.hooks.PreToolUse = [];
-
-  const hookCommand = hookPath ? `node "${hookPath}"` : DEFAULT_HOOK_COMMAND;
-
-  const already = config.hooks.PreToolUse.some((entry: any) =>
-    Array.isArray(entry?.hooks) &&
-    entry.hooks.some((h: any) => typeof h?.command === 'string' && (h.command.includes('vibe-splain hook pretooluse') || h.command.includes('hook.js')))
-  );
-  if (already) {
-    // Update existing hook command to the resolved hook.js path
-    config.hooks.PreToolUse = config.hooks.PreToolUse.map((entry: any) => {
-      if (Array.isArray(entry?.hooks)) {
-        return {
-          ...entry,
-          hooks: entry.hooks.map((h: any) => {
-            if (typeof h?.command === 'string' && (h.command.includes('vibe-splain hook pretooluse') || h.command.includes('hook.js'))) {
-              return { ...h, command: hookCommand };
-            }
-            return h;
-          })
-        };
-      }
-      return entry;
-    });
-    return config;
-  }
-
-  config.hooks.PreToolUse.push({
-    matcher: HOOK_MATCHER,
-    hooks: [{ type: 'command', command: hookCommand }],
-  });
-  return config;
-}
-
 export async function installCommand(): Promise<void> {
-  console.error('\n🔧 vibe-splain Installer\n');
+  console.error('\n🔧 vibesplain Installer\n');
   let patchedCount = 0;
 
   for (const agent of AGENT_CONFIGS) {
@@ -103,20 +57,10 @@ export async function installCommand(): Promise<void> {
         continue;
       }
 
-      // Patch config (idempotent: only write when something actually changes,
-      // so existing users still pick up newly-added pieces like the hook).
       const before = JSON.stringify(config);
 
       if (!config.mcpServers) config.mcpServers = {};
-      if (!config.mcpServers['vibe-splain']) config.mcpServers['vibe-splain'] = MCP_ENTRY;
-
-      // The PreToolUse gate is a Claude Code CLI feature (settings.json hooks).
-      // Only register it there; Desktop/Gemini/Cursor don't run these hooks.
-      if (agent.name === 'Claude Code CLI') {
-        const __dirname = dirname(fileURLToPath(import.meta.url));
-        const hookPath = join(__dirname, '..', 'hook.js');
-        addPreToolUseHook(config, hookPath);
-      }
+      if (!config.mcpServers['vibesplain']) config.mcpServers['vibesplain'] = MCP_ENTRY;
 
       if (JSON.stringify(config) === before) {
         console.error(`    ✓ Already configured, skipping`);
@@ -137,7 +81,7 @@ export async function installCommand(): Promise<void> {
     console.error(`Add this manually to your agent's MCP config:\n`);
     console.error(JSON.stringify({
       mcpServers: {
-        'vibe-splain': MCP_ENTRY
+        'vibesplain': MCP_ENTRY
       }
     }, null, 2));
     process.exit(1);

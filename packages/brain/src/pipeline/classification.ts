@@ -777,7 +777,7 @@ export async function runClassification(
   const staticGravityByFile = new Map(gravityByFile);
 
   if (adapterStage.firedAdapterIds.length > 0) {
-    console.error(`[vibe-splain] adapters fired: ${adapterStage.firedAdapterIds.join(', ')}`);
+    console.error(`[vibesplain] adapters fired: ${adapterStage.firedAdapterIds.join(', ')}`);
     // Apply behavioralLift to staticGravity before stage-8 reads it.
     // gravity = max(staticGravity, min(100, staticGravity + lift)); lift never demotes.
     for (const w of work) {
@@ -865,7 +865,7 @@ export async function runClassification(
   }
 
   // Write stage artifacts
-  const dir = join(projectRoot, '.vibe-splainer');
+  const dir = join(projectRoot, '.vibesplain');
   await mkdir(dir, { recursive: true });
 
   const stage05 = Object.fromEntries(classified.map(f => [f.rel, f.sideEffectProfile]));

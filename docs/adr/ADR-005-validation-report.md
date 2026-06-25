@@ -30,14 +30,14 @@ Three options were evaluated:
     "passed": false,
     "errors": 2,
     "warnings": 1,
-    "reportPath": ".vibe-splainer/validation_report.json"
+    "reportPath": ".vibesplain/validation_report.json"
   },
   "artifacts": {
-    "analysis": ".vibe-splainer/analysis.json",
-    "deltaTargets": ".vibe-splainer/delta_targets.json",
-    "dossier": ".vibe-splainer/dossier.json",
-    "graph": ".vibe-splainer/graph.json",
-    "html": ".vibe-splainer/ui/index.html"
+    "analysis": ".vibesplain/analysis.json",
+    "deltaTargets": ".vibesplain/delta_targets.json",
+    "dossier": ".vibesplain/dossier.json",
+    "graph": ".vibesplain/graph.json",
+    "html": ".vibesplain/ui/index.html"
   }
 }
 ```

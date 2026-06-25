@@ -8,7 +8,7 @@
 
 ## Context
 
-In multi-agent setups or parallel CLI usage, race conditions can corrupt `.vibe-splainer/` state. Furthermore, "Skeleton Drift" occurs if an agent reasons about an outdated file view.
+In multi-agent setups or parallel CLI usage, race conditions can corrupt `.vibesplain/` state. Furthermore, "Skeleton Drift" occurs if an agent reasons about an outdated file view.
 
 ---
 
@@ -19,7 +19,7 @@ Enforce integrity through **Content-Addressing**, **Hash-Guards**, and **SQLite 
 ### Storage & Concurrency Model
 
 - **SQLite stores metadata and indexes.** Must use `PRAGMA busy_timeout = 5000;` (set first) then `PRAGMA journal_mode = WAL;`. Serialized writes via `async-mutex` within a process; WAL handles concurrent reads from other processes.
-- **Filesystem stores immutable blobs.** `.vibe-splainer/blobs/sha256_<hex>` — named by content hash, never overwritten.
+- **Filesystem stores immutable blobs.** `.vibesplain/blobs/sha256_<hex>` — named by content hash, never overwritten.
 - Blobs must be written atomically: `writeFile(tmp) → open(tmp).datasync() → close() → rename(tmp, blob)`.
 - BlobStore deduplicates: if a blob already exists at the target path, `writeAtomic()` returns immediately without re-writing.
 
@@ -47,5 +47,5 @@ Prevents data corruption across parallel processes without a heavyweight backgro
 
 ## Consequences
 
-- `.vibe-splainer/` storage is split into `pointer_store.db` and `blobs/`.
+- `.vibesplain/` storage is split into `pointer_store.db` and `blobs/`.
 - `packages/brain` exposes deterministic hashing via `ProofValidator.ts`; utilities live in `BlobStore.ts` in the CLI layer.

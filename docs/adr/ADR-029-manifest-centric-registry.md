@@ -8,7 +8,7 @@
 
 ## Context
 
-vibe-splain produces multiple outputs per scan. Discovering these via path-guessing is fragile, prevents partial scan success logic, and complicates cross-machine collaboration.
+vibesplain produces multiple outputs per scan. Discovering these via path-guessing is fragile, prevents partial scan success logic, and complicates cross-machine collaboration.
 
 ---
 
@@ -22,9 +22,9 @@ The manifest records every artifact produced. It must advertise **Indexes** and 
 
 ### Portability & Bundles
 
-To share "Ground Truth", provide a `vibe-splain bundle <scan_id>` command. This packages the manifest, pointer metadata, indexes, and blobs into a portable `vibe-bundle.tar.gz`.
+To share "Ground Truth", provide a `vibesplain bundle <scan_id>` command. This packages the manifest, pointer metadata, indexes, and blobs into a portable `vibe-bundle.tar.gz`.
 
-On import (`vibe-splain import`), the system validates hashes and inserts pointers into a **Bundle Namespace** using an alias map.
+On import (`vibesplain import`), the system validates hashes and inserts pointers into a **Bundle Namespace** using an alias map.
 
 *Rule: Pointers are portable only inside a bundle namespace. Content hashes are globally meaningful.*
 
@@ -55,8 +55,8 @@ On import (`vibe-splain import`), the system validates hashes and inserts pointe
 
 - **`ExportOrchestrator.writeBundle()`** (`packages/cli/src/export/ExportOrchestrator.ts`): returns `{ scanId, manifestPointer }`. Registers every artifact in BlobStore + PointerStore. Generates `analysis.index.json` with `startHere`, `topHeat`, `pillarSummary`, `totalFiles`, `realSourceFiles`. Registers manifest pointer as `ptr_manifest_<scanId>`.
 - **`scan_project` tool**: generates `scanId = scan_${Date.now()}` before calling `writeBundle`; returns `{ scanId, manifestPointer }` to the agent.
-- **`bundleCommand`** (`packages/cli/src/commands/bundle.ts`): stages artifacts in `.vibe-splainer/tmp/bundle-stage-<scanId>/`, creates gzipped tar with `portable: true`.
-- **`importBundleCommand`** (`packages/cli/src/commands/importBundle.ts`): extracts to `.vibe-splainer/tmp/import-<namespace>/`, verifies blob hashes before inserting; namespaces pointer IDs as `<namespace>::<pointerId>`.
+- **`bundleCommand`** (`packages/cli/src/commands/bundle.ts`): stages artifacts in `.vibesplain/tmp/bundle-stage-<scanId>/`, creates gzipped tar with `portable: true`.
+- **`importBundleCommand`** (`packages/cli/src/commands/importBundle.ts`): extracts to `.vibesplain/tmp/import-<namespace>/`, verifies blob hashes before inserting; namespaces pointer IDs as `<namespace>::<pointerId>`.
 - **Verified by:** `test_portability.ts` (bundle → import hash round-trip), `test_adversarial.ts` check 8 (delegated).
 
 ---

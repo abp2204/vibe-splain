@@ -20,7 +20,7 @@ export function Header({ dossier }: { dossier: Dossier }) {
       <div className="header-left">
         <div className="wordmark">
           <span className="wordmark-glyph">◈</span>
-          vibe-splain
+          vibesplain
         </div>
         <div className="project-path">{dossier.projectRoot}</div>
       </div>

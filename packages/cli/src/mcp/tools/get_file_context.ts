@@ -1,6 +1,6 @@
 import { readFile } from 'fs/promises';
 import { join, relative, isAbsolute } from 'path';
-import { getFileAnalysis, readAnalysis } from '@vibe-splain/brain';
+import { getFileAnalysis, readAnalysis } from '@vibesplain/brain';
 
 export const getFileContextTool = {
   name: 'get_file_context',

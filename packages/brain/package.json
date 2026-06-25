@@ -1,5 +1,5 @@
 {
-  "name": "@vibe-splain/brain",
+  "name": "@vibesplain/brain",
   "version": "1.5.0",
   "type": "module",
   "main": "./dist/index.js",

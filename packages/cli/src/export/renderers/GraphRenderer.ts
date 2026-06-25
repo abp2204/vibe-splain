@@ -1,5 +1,5 @@
-import { type ImportGraph } from '@vibe-splain/brain';
-import type { DossierViewModel, AnalysisStore } from '@vibe-splain/brain';
+import { type ImportGraph } from '@vibesplain/brain';
+import type { DossierViewModel, AnalysisStore } from '@vibesplain/brain';
 import type { Renderer } from './Renderer.js';
 import type { Artifact } from '../ArtifactBundleWriter.js';
 

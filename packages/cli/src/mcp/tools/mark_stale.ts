@@ -1,4 +1,4 @@
-import { readDossier } from '@vibe-splain/brain';
+import { readDossier } from '@vibesplain/brain';
 import { ExportOrchestrator } from '../../export/ExportOrchestrator.js';
 
 export const markStaleTool = {

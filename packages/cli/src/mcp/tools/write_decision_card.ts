@@ -1,5 +1,5 @@
-import { readDossier, validateMermaidNodeCount, readAnalysis } from '@vibe-splain/brain';
-import type { DecisionCard, Evidence, CardCategory } from '@vibe-splain/brain';
+import { readDossier, validateMermaidNodeCount, readAnalysis } from '@vibesplain/brain';
+import type { DecisionCard, Evidence, CardCategory } from '@vibesplain/brain';
 import { ExportOrchestrator } from '../../export/ExportOrchestrator.js';
 import { v4 as uuidv4 } from 'uuid';
 import { createHash } from 'crypto';
@@ -152,7 +152,7 @@ export async function handleWriteDecisionCard(args: Record<string, unknown>, opt
     scope: options.scope,
   });
 
-  console.error(`[vibe-splain] Card written: "${title}" [${category} sev${severity}] in "${pillar}"${isWild ? ' (Wild Discovery)' : ''}`);
+  console.error(`[vibesplain] Card written: "${title}" [${category} sev${severity}] in "${pillar}"${isWild ? ' (Wild Discovery)' : ''}`);
 
   // Keep the loop going: compute what is still undocumented.
   const documented = new Set(

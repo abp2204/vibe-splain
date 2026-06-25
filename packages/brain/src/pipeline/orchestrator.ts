@@ -41,11 +41,12 @@ export async function runPipeline(projectRoot: string): Promise<PipelineScanResu
   // Stage 9-12: scoring (canonical severity, validation report)
   const scoring = await runScoring(projectRoot, cr);
 
-  // Build FileAnalysis array for backward compat with ScanResult
-  const files: FileAnalysis[] = cr.classified
-    .filter(f => f.isRealSource)
-    .sort((a, b) => b.gravity - a.gravity)
-    .map(f => ({
+  // Build FileAnalysis arrays — single pass over classified
+  const files: FileAnalysis[] = [];
+  const wildCandidates: FileAnalysis[] = [];
+  for (const f of cr.classified) {
+    if (!f.isRealSource) continue;
+    const fa: FileAnalysis = {
       path: f.abs,
       relativePath: f.rel,
       language: f.lang,
@@ -60,29 +61,14 @@ export async function runPipeline(projectRoot: string): Promise<PipelineScanResu
       frameworkRole: (f.executionRole ?? f.frameworkRole) as any,
       productDomain: (f.domainTags?.[0] ?? f.adapterDomain ?? f.productDomain) as any,
       sideEffectProfile: (f.adapterSideEffects ?? f.sideEffectProfile) as any,
-    }));
+    };
+    files.push(fa);
+    if (f.heat >= 60 || f.smells.some(s => s.severity >= 4)) wildCandidates.push(fa);
+  }
+  files.sort((a, b) => b.gravity - a.gravity);
+  wildCandidates.sort((a, b) => b.heat - a.heat);
 
-  const wildCandidates = cr.classified
-    .filter(f => f.isRealSource && (f.heat >= 60 || f.smells.some(s => s.severity >= 4)))
-    .sort((a, b) => b.heat - a.heat)
-    .map(f => ({
-      path: f.abs,
-      relativePath: f.rel,
-      language: f.lang,
-      isRealSource: f.isRealSource,
-      demoteReason: f.demoteReason,
-      gravity: Math.round(f.gravity),
-      heat: Math.round(f.heat),
-      gravitySignals: f.gravitySignals,
-      heatSignals: f.heatSignals,
-      smells: f.smells,
-      pillarHint: f.pillarHint,
-      frameworkRole: (f.executionRole ?? f.frameworkRole) as any,
-      productDomain: (f.domainTags?.[0] ?? f.adapterDomain ?? f.productDomain) as any,
-      sideEffectProfile: (f.adapterSideEffects ?? f.sideEffectProfile) as any,
-    }));
-
-  const uiUrl = `file://${join(projectRoot, '.vibe-splainer', 'ui', 'index.html')}`;
+  const uiUrl = `file://${join(projectRoot, '.vibesplain', 'ui', 'index.html')}`;
 
   return {
     projectRoot,
@@ -98,7 +84,7 @@ export async function runPipeline(projectRoot: string): Promise<PipelineScanResu
       passed: scoring.validationReport.passed,
       errors: scoring.validationReport.summary.errorCount,
       warnings: scoring.validationReport.summary.warningCount,
-      reportPath: '.vibe-splainer/validation_report.json',
+      reportPath: '.vibesplain/validation_report.json',
     },
     fullValidationReport: scoring.validationReport,
   };

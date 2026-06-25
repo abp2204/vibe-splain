@@ -89,7 +89,7 @@ function deriveEntrypointTraceStatus(
 ## Rationale
 
 - The previous structural check gave a false `partial` status for `useBookings.ts`, masking a genuine classification failure in the entrypoint tracer.
-- Pattern-based matching (not an explicit path allowlist) is required because vibe-splain runs against arbitrary repos, not just one project. Sample paths seed the patterns; they are not a hard allowlist.
+- Pattern-based matching (not an explicit path allowlist) is required because vibesplain runs against arbitrary repos, not just one project. Sample paths seed the patterns; they are not a hard allowlist.
 - A domain-aware check is the right place to catch wrong surfaces. The entrypoint tracer is graph-structural; the surface quality check is semantic.
 
 ---

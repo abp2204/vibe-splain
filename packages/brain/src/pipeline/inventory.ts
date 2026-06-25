@@ -15,6 +15,7 @@ const require = createRequire(import.meta.url);
 // ── Parser init ──────────────────────────────────────────────────────────────
 
 let _parser: Parser | null = null;
+let _parserCurrentLang: Language | null = null;
 const langCache = new Map<Language, Parser.Language>();
 
 export const EXT_LANG: Record<string, Language> = {
@@ -46,7 +47,7 @@ async function getLanguage(lang: Language): Promise<Parser.Language | null> {
   if (cached) return cached;
   const wasm = resolveWasm(LANG_WASM[lang]);
   if (!wasm) {
-    console.error(`[vibe-splain] grammar missing for ${lang} (${LANG_WASM[lang]}); skipping`);
+    console.error(`[vibesplain] grammar missing for ${lang} (${LANG_WASM[lang]}); skipping`);
     return null;
   }
   try {
@@ -54,7 +55,7 @@ async function getLanguage(lang: Language): Promise<Parser.Language | null> {
     langCache.set(lang, loaded);
     return loaded;
   } catch (err) {
-    console.error(`[vibe-splain] failed to load grammar for ${lang}:`, err instanceof Error ? err.message : err);
+    console.error(`[vibesplain] failed to load grammar for ${lang}:`, err instanceof Error ? err.message : err);
     return null;
   }
 }
@@ -70,9 +71,12 @@ export async function initParser(): Promise<Parser> {
 
 export async function parseAs(lang: Language, source: string): Promise<Parser.Tree | null> {
   const p = await initParser();
-  const language = await getLanguage(lang);
-  if (!language) return null;
-  p.setLanguage(language);
+  if (_parserCurrentLang !== lang) {
+    const language = await getLanguage(lang);
+    if (!language) return null;
+    p.setLanguage(language);
+    _parserCurrentLang = lang;
+  }
   try {
     return p.parse(source);
   } catch {
@@ -83,7 +87,7 @@ export async function parseAs(lang: Language, source: string): Promise<Parser.Tr
 // ── File collection ──────────────────────────────────────────────────────────
 
 export const EXCLUDE_DIRS = new Set([
-  'node_modules', 'dist', 'build', '.next', 'out', '.vibe-splainer', '.git',
+  'node_modules', 'dist', 'build', '.next', 'out', '.vibesplain', '.git',
   '.venv', 'venv', 'env', '__pycache__', '.idea', '.vscode', '.cache',
   'site-packages', 'target', '.tox', '.mypy_cache', '.pytest_cache',
 ]);
@@ -871,7 +875,6 @@ export interface WorkItem {
   lang: Language;
   source: string;
   ast: AstAnalysis;
-  tree?: Parser.Tree;
   importSpecs: string[];
   rawNamedImports: RawNamedImport[];
   pathDemote: string | null;
@@ -935,14 +938,14 @@ export async function runInventory(projectRoot: string): Promise<InventoryResult
     const productDomain = inferProductDomain(rel, importSpecs);
 
     work.push({
-      abs: file, rel, lang, source, ast, tree, importSpecs, rawNamedImports,
+      abs: file, rel, lang, source, ast, importSpecs, rawNamedImports,
       pathDemote: pathDemoteReason(rel),
       frameworkRole, productDomain,
     });
   }
 
   // Write stage artifacts
-  const dir = join(projectRoot, '.vibe-splainer');
+  const dir = join(projectRoot, '.vibesplain');
   await mkdir(dir, { recursive: true });
 
   const stage01 = {
@@ -953,13 +956,13 @@ export async function runInventory(projectRoot: string): Promise<InventoryResult
     totalCount: work.length,
     realSourceCount: work.filter(w => !w.pathDemote).length,
   };
-  await writeFile(join(dir, 'stage-01-inventory.json'), JSON.stringify(stage01, null, 2), 'utf8');
-
   const stage02 = Object.fromEntries(work.map(w => [w.rel, w.frameworkRole]));
-  await writeFile(join(dir, 'stage-02-framework-roles.json'), JSON.stringify(stage02, null, 2), 'utf8');
-
   const stage03 = Object.fromEntries(work.map(w => [w.rel, w.productDomain]));
-  await writeFile(join(dir, 'stage-03-domains.json'), JSON.stringify(stage03, null, 2), 'utf8');
+  await Promise.all([
+    writeFile(join(dir, 'stage-01-inventory.json'), JSON.stringify(stage01, null, 2), 'utf8'),
+    writeFile(join(dir, 'stage-02-framework-roles.json'), JSON.stringify(stage02, null, 2), 'utf8'),
+    writeFile(join(dir, 'stage-03-domains.json'), JSON.stringify(stage03, null, 2), 'utf8'),
+  ]);
 
   return { projectRoot, work, stack, entrypoints, fileSet, basenameIndex };
 }

@@ -39,6 +39,12 @@ function parseJsonLenient(text: string): unknown {
 
 // ── tsconfig.json alias extraction (with recursive discovery) ──────────────
 
+const TSCONFIG_SKIP_DIRS = new Set([
+  'node_modules', '.git', 'dist', 'build', '.next', 'out', '.cache',
+  '.vibesplain', '__pycache__', 'target', '.mypy_cache', '.pytest_cache',
+  '.tox', 'venv', '.venv', 'env', 'site-packages', 'vendor',
+]);
+
 async function discoverAllTsConfigs(dir: string, projectRoot: string, maxDepth = 4): Promise<Record<string, string>> {
   const result: Record<string, string> = {};
   if (maxDepth < 0) return result;
@@ -52,7 +58,7 @@ async function discoverAllTsConfigs(dir: string, projectRoot: string, maxDepth =
   for (const entry of entries) {
     const fullPath = join(dir, entry.name);
     if (entry.isDirectory()) {
-      if (entry.name === 'node_modules' || entry.name === '.git') continue;
+      if (TSCONFIG_SKIP_DIRS.has(entry.name)) continue;
       const sub = await discoverAllTsConfigs(fullPath, projectRoot, maxDepth - 1);
       Object.assign(result, sub);
     } else if (entry.name === 'tsconfig.json') {
@@ -364,14 +370,19 @@ export async function runResolution(
   const resolutionFailureReasons: Record<string, string> = {};
   const unresolvedSet = new Set<string>();
 
-  // Resolve all imports
+  // Resolve all imports — cache per (abs, spec) to avoid repeated alias iteration
+  const resolveCache = new Map<string, { resolved: string | null; isAlias: boolean; reason?: string }>();
   for (const w of work) {
     const distinctModules = new Set<string>();
     for (const spec of w.importSpecs) {
       distinctModules.add(spec);
-      const { resolved, isAlias, reason } = resolveImportWithAliasMap(
-        spec, w.abs, w.lang, projectRoot, fileSet, basenameIndex, aliasMap,
-      );
+      const cacheKey = `${w.abs}\0${spec}`;
+      let cached = resolveCache.get(cacheKey);
+      if (!cached) {
+        cached = resolveImportWithAliasMap(spec, w.abs, w.lang, projectRoot, fileSet, basenameIndex, aliasMap);
+        resolveCache.set(cacheKey, cached);
+      }
+      const { resolved, isAlias, reason } = cached;
 
       if (resolved && resolved !== w.rel && importedBy.has(resolved)) {
         importedBy.get(resolved)!.add(w.rel);
@@ -393,7 +404,7 @@ export async function runResolution(
   const unresolvedImports = [...unresolvedSet];
 
   // Write stage artifact
-  const dir = join(projectRoot, '.vibe-splainer');
+  const dir = join(projectRoot, '.vibesplain');
   await mkdir(dir, { recursive: true });
   const stage04 = {
     resolvedAliases: aliasMap.resolvedAliases,

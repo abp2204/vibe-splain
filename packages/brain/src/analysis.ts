@@ -89,7 +89,7 @@ export interface AnalysisStore {
 }
 
 export async function readAnalysis(projectRoot: string): Promise<AnalysisStore | null> {
-  const p = join(projectRoot, '.vibe-splainer', 'analysis.json');
+  const p = join(projectRoot, '.vibesplain', 'analysis.json');
   try {
     const raw = await readFile(p, 'utf8');
     return JSON.parse(raw) as AnalysisStore;
@@ -99,7 +99,7 @@ export async function readAnalysis(projectRoot: string): Promise<AnalysisStore |
 }
 
 export async function writeAnalysis(projectRoot: string, store: AnalysisStore): Promise<void> {
-  const dir = join(projectRoot, '.vibe-splainer');
+  const dir = join(projectRoot, '.vibesplain');
   await mkdir(dir, { recursive: true });
   const dest = join(dir, 'analysis.json');
   const tmp = dest + '.tmp';
@@ -109,7 +109,7 @@ export async function writeAnalysis(projectRoot: string, store: AnalysisStore): 
 }
 
 export async function readActionBindings(projectRoot: string): Promise<any | null> {
-  const p = join(projectRoot, '.vibe-splainer', 'action_bindings.json');
+  const p = join(projectRoot, '.vibesplain', 'action_bindings.json');
   try {
     const raw = await readFile(p, 'utf8');
     return JSON.parse(raw);

@@ -1,4 +1,4 @@
-// Single source of truth for every bit of vibe-splain jargon.
+// Single source of truth for every bit of vibesplain jargon.
 // Keyed by a stable slug; <Term k="..."> looks definitions up here.
 // Keep definitions to one plain-English sentence — they render in a tooltip.
 

@@ -1,5 +1,5 @@
-import { scanProject, readDossier } from '@vibe-splain/brain';
-import type { Dossier } from '@vibe-splain/brain';
+import { scanProject, readDossier } from '@vibesplain/brain';
+import type { Dossier } from '@vibesplain/brain';
 import { ExportOrchestrator } from '../../export/ExportOrchestrator.js';
 import { startWatcher } from '../../export/Watcher.js';
 
@@ -28,7 +28,6 @@ export interface ScanRun {
   result: Awaited<ReturnType<typeof scanProject>>;
   dossier: Dossier;
   scanId: string;
-  manifestPointer: unknown;
 }
 
 export async function performScan(projectRoot: string, options: any = {}): Promise<ScanRun> {
@@ -65,21 +64,21 @@ export async function performScan(projectRoot: string, options: any = {}): Promi
 
   const scanId = `scan_${Date.now()}`;
   const orchestrator = new ExportOrchestrator(projectRoot);
-  const { manifestPointer } = await orchestrator.writeBundle(dossier, {
+  await orchestrator.writeBundle(dossier, {
     format: options.format,
     budget: options.budget ? parseInt(options.budget, 10) : undefined,
     scope: options.scope,
-  }, result.store, result.graph, scanId);
+  }, result.store, result.graph);
 
-  return { result, dossier, scanId, manifestPointer };
+  return { result, dossier, scanId };
 }
 
 export async function handleScanProject(args: Record<string, unknown>, options: any = {}): Promise<unknown> {
   const projectRoot = args.projectRoot as string;
   if (!projectRoot) throw new Error('projectRoot is required');
 
-  console.error(`[vibe-splain] Scanning project: ${projectRoot}`);
-  const { result, scanId, manifestPointer } = await performScan(projectRoot, options);
+  console.error(`[vibesplain] Scanning project: ${projectRoot}`);
+  const { result, scanId } = await performScan(projectRoot, options);
 
   // Watch the real-source files for staleness. MCP serve mode keeps this alive
   // for the session; headless callers pass watch:false so the persistent
@@ -88,15 +87,14 @@ export async function handleScanProject(args: Record<string, unknown>, options: 
     await startWatcher(projectRoot, result.files.map(f => f.path));
   }
 
-  console.error(`[vibe-splain] Scan complete. ${result.totalFilesScanned} files, ${result.realSourceCount} real-source, ${result.wildCandidates.length} wild candidates.`);
+  console.error(`[vibesplain] Scan complete. ${result.totalFilesScanned} files, ${result.realSourceCount} real-source, ${result.wildCandidates.length} wild candidates.`);
 
-  const validation = result.validation ?? { passed: true, errors: 0, warnings: 0, reportPath: '.vibe-splainer/validation_report.json' };
+  const validation = result.validation ?? { passed: true, errors: 0, warnings: 0, reportPath: '.vibesplain/validation_report.json' };
 
   return {
     ok: true,
     message: 'Scan complete.',
     scanId,
-    manifestPointer,
     validation: result.fullValidationReport || {
       passed: validation.passed,
       errors: validation.errors,
@@ -104,10 +102,10 @@ export async function handleScanProject(args: Record<string, unknown>, options: 
       reportPath: validation.reportPath,
     },
     artifacts: {
-      analysis: '.vibe-splainer/analysis.json',
-      dossier: '.vibe-splainer/dossier.json',
-      graph: '.vibe-splainer/graph.json',
-      html: '.vibe-splainer/ui/index.html',
+      analysis: '.vibesplain/analysis.json',
+      dossier: '.vibesplain/dossier.json',
+      graph: '.vibesplain/graph.json',
+      html: '.vibesplain/ui/index.html',
     },
     projectRoot: result.projectRoot,
     totalFilesScanned: result.totalFilesScanned,

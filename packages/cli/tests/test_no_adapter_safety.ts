@@ -2,7 +2,7 @@ import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { makeTmpDir, cleanTmpDir, assert } from './helpers.js';
 import { handleScanProject } from '../src/mcp/tools/scan_project.js';
-import { initParser, readAnalysis } from '@vibe-splain/brain';
+import { initParser, readAnalysis } from '@vibesplain/brain';
 
 async function runTest() {
   const tmpDir = makeTmpDir();

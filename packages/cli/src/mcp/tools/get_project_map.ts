@@ -1,4 +1,4 @@
-import { readDossier } from '@vibe-splain/brain';
+import { readDossier } from '@vibesplain/brain';
 
 export const getProjectMapTool = {
   name: 'get_project_map',

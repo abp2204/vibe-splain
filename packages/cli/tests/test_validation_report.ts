@@ -2,7 +2,7 @@ import { writeFile, mkdir, readFile } from 'fs/promises';
 import { join } from 'path';
 import { makeTmpDir, cleanTmpDir, assert } from './helpers.js';
 import { handleScanProject } from '../src/mcp/tools/scan_project.js';
-import { initParser } from '@vibe-splain/brain';
+import { initParser } from '@vibesplain/brain';
 
 async function runTest() {
   const tmpDir = makeTmpDir();
@@ -28,7 +28,7 @@ async function runTest() {
     assert(result.ok === true, 'Scan should be successful');
     
     // Check validation_report.json artifact on disk
-    const reportPath = join(tmpDir, '.vibe-splainer', 'validation_report.json');
+    const reportPath = join(tmpDir, '.vibesplain', 'validation_report.json');
     const reportRaw = await readFile(reportPath, 'utf8');
     const report = JSON.parse(reportRaw);
     
